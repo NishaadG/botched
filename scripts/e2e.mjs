@@ -82,5 +82,16 @@ await host.page.waitForSelector("text=Game over", { timeout: 60000 });
 await host.page.waitForTimeout(1500);
 await host.page.screenshot({ path: `${OUT}/5-results.png`, fullPage: true });
 console.log("result:", (await host.page.innerText("h1")).trim());
+
+// Post-game feedback from the host.
+await host.page.click('button[aria-label="Really fun"]');
+await host.page.fill('input[aria-label="Comment"]', "the bot's typos were way too convincing");
+await host.page.click("text=Send");
+await host.page.waitForSelector("text=Thanks!", { timeout: 10000 });
+console.log("feedback sent");
+await host.page.goto(`${BASE}/stats`);
+await host.page.waitForSelector("text=the bot's typos were way too convincing", { timeout: 10000 });
+await host.page.screenshot({ path: `${OUT}/6-stats.png`, fullPage: true });
+console.log("stats page shows the feedback");
 console.log(errors.length ? `ERRORS:\n${errors.join("\n")}` : "no browser errors");
 await browser.close();

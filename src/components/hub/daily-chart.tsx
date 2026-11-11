@@ -19,9 +19,11 @@ export function DailyChart({ title, unit, color, data }: { title: string; unit: 
   const H = 180;
   const padL = 28;
   const padB = 22;
+  const padT = 12;
   const slot = (W - padL) / data.length;
   const barW = Math.max(4, slot - 6);
-  const y = (v: number) => (H - padB) * (1 - v / niceMax);
+  const y = (v: number) => padT + (H - padB - padT) * (1 - v / niceMax);
+  const last = data.length - 1;
   const active = hover === null ? null : data[hover];
 
   return (
@@ -64,7 +66,7 @@ export function DailyChart({ title, unit, color, data }: { title: string; unit: 
                   opacity={hover === null || hover === i ? 1 : 0.45}
                 />
               )}
-              {(i === 0 || i === data.length - 1 || i % 4 === 0) && (
+              {(i === last || (i % 4 === 0 && last - i >= 3)) && (
                 <text x={padL + i * slot + slot / 2} y={H - 6} textAnchor="middle" fontSize={10} fill="var(--color-muted)">
                   {fmtDay(d.day)}
                 </text>

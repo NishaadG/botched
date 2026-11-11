@@ -10,7 +10,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "e2e": "node scripts/e2e.mjs",
     "e2e:lounge": "node scripts/lounge-e2e.mjs",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "demo": "node scripts/demo.mjs"
   },
   "dependencies": {
     "@nexconn/chat": "^26.2.1",
