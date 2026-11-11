@@ -11,8 +11,23 @@ export interface IncomingMessage {
   from: string;
   type: string;
   text?: string;
+  /** Display name carried inside the message (lounge only; game chat stays anonymous). */
+  name?: string;
+  /** Structured extra payload, e.g. a room invite posted to the lounge. */
+  extra?: Record<string, unknown>;
   data?: Record<string, unknown>;
   at: number;
+}
+
+function parseExtra(raw: unknown): Record<string, unknown> | undefined {
+  if (raw && typeof raw === "object") return raw as Record<string, unknown>;
+  if (typeof raw !== "string" || !raw) return undefined;
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === "object" ? v : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 type Listener = (m: IncomingMessage) => void;
@@ -41,12 +56,15 @@ function toIncoming(m: {
   sentTime: number;
 }): IncomingMessage {
   const content = m.content ?? {};
+  const info = (content.senderUserInfo ?? content.user) as { name?: string } | undefined;
   return {
     id: m.messageId,
     channelId: m.channelIdentifier.channelId,
     from: m.senderUserId,
     type: m.messageType,
     text: typeof content.text === "string" ? content.text : typeof content.content === "string" ? content.content : undefined,
+    name: typeof info?.name === "string" ? info.name : undefined,
+    extra: parseExtra(content.extra),
     data: m.messageType.startsWith("BT:") ? content : undefined,
     at: m.sentTime,
   };
@@ -128,9 +146,11 @@ export async function sendTyping(channelId: string) {
   await new GroupChannel(channelId).sendMessage(new SendMessageParams({ kind: "typing" }, TYPING)).catch(() => {});
 }
 
-export async function sendOpenText(channelId: string, text: string) {
+export async function sendOpenText(channelId: string, text: string, sender: { id: string; name: string }) {
   const { OpenChannel, SendTextMessageParams } = await sdk();
-  const result = await new OpenChannel(channelId).sendMessage(new SendTextMessageParams({ text }));
+  const result = await new OpenChannel(channelId).sendMessage(
+    new SendTextMessageParams({ text, senderUserInfo: { userId: sender.id, name: sender.name } }),
+  );
   if (!result.isOk || !result.data) throw new Error(`Send failed (code ${result.code})`);
   return toIncoming(result.data as never);
 }

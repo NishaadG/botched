@@ -5,6 +5,7 @@ import { chooseVote, generateLine, shouldReply, timing } from "../bot/brain";
 import { personaById, PERSONAS } from "../bot/personas";
 import { sendGroupEvent, sendGroupText } from "../nexconn-server";
 import { kv } from "../store";
+import { emptyRecord, type PlayerRecord } from "../stats";
 import { addMessage, castVote, GameError } from "./engine";
 import type { Effect, Room } from "./types";
 
@@ -139,14 +140,29 @@ async function recordStats(code: string) {
     room.statsRecorded = true;
     const humansWon = room.winner === "humans";
     const final = room.eliminations.at(-1);
+    const humans = room.players.filter((x) => !x.isBot);
+    const botAlias = room.players.find((x) => x.isBot)?.alias ?? "";
     await kv.incr("stats:games");
     await kv.incr(humansWon ? "stats:humanWins" : "stats:botWins");
-    for (const p of room.players.filter((x) => !x.isBot)) {
+    await kv.incr("stats:messages", room.transcript.length);
+    for (const p of humans) {
+      const caught = humansWon && !!final && room.votes[p.id] === final.playerId;
       await kv.sadd("stats:players", p.id);
       await kv.zincr("lb:games", p.id, 1);
-      if (humansWon && final && room.votes[p.id] === final.playerId) await kv.zincr("lb:catches", p.id, 1);
+      if (caught) await kv.zincr("lb:catches", p.id, 1);
       if (humansWon && p.alive) await kv.zincr("lb:survived", p.id, 1);
       await kv.set(`name:${p.id}`, p.name);
+      const rec = (await kv.get<PlayerRecord>(`player:${p.id}`)) ?? emptyRecord();
+      rec.games += 1;
+      if (humansWon) rec.wins += 1;
+      else rec.fooled += 1;
+      if (caught) rec.catches += 1;
+      rec.lastPlayed = Date.now();
+      rec.recent = [
+        { code: room.code, at: Date.now(), won: humansWon, rounds: room.round, players: humans.length, botAlias },
+        ...rec.recent,
+      ].slice(0, 10);
+      await kv.set(`player:${p.id}`, rec);
     }
     return [];
   });

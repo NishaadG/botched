@@ -38,69 +38,71 @@ body {
   background-size: auto, auto, 32px 32px, 32px 32px;
 }
 
-.card {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.01)), var(--color-panel);
-  border: 1px solid var(--color-line);
-  border-radius: 1.25rem;
-}
+@layer components {
+  .card {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.01)), var(--color-panel);
+    border: 1px solid var(--color-line);
+    border-radius: 1.25rem;
+  }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: 999px;
-  padding: 0.8rem 1.4rem;
-  font-weight: 700;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease,
-    opacity 0.2s;
-}
-.btn:active {
-  transform: translateY(1px) scale(0.98);
-}
-.btn:disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-.btn-brand {
-  background: var(--color-brand);
-  color: var(--color-brand-ink);
-  box-shadow:
-    0 0 0 1px rgb(163 255 92 / 0.4),
-    0 10px 30px -10px rgb(163 255 92 / 0.6);
-}
-.btn-brand:hover {
-  box-shadow:
-    0 0 0 1px rgb(163 255 92 / 0.7),
-    0 14px 40px -10px rgb(163 255 92 / 0.8);
-}
-.btn-ghost {
-  background: rgb(255 255 255 / 0.05);
-  border: 1px solid var(--color-line);
-  color: var(--color-text);
-}
-.btn-ghost:hover {
-  background: rgb(255 255 255 / 0.09);
-}
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.8rem 1.4rem;
+    font-weight: 700;
+    transition:
+      transform 0.12s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease,
+      opacity 0.2s;
+  }
+  .btn:active {
+    transform: translateY(1px) scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .btn-brand {
+    background: var(--color-brand);
+    color: var(--color-brand-ink);
+    box-shadow:
+      0 0 0 1px rgb(163 255 92 / 0.4),
+      0 10px 30px -10px rgb(163 255 92 / 0.6);
+  }
+  .btn-brand:hover {
+    box-shadow:
+      0 0 0 1px rgb(163 255 92 / 0.7),
+      0 14px 40px -10px rgb(163 255 92 / 0.8);
+  }
+  .btn-ghost {
+    background: rgb(255 255 255 / 0.05);
+    border: 1px solid var(--color-line);
+    color: var(--color-text);
+  }
+  .btn-ghost:hover {
+    background: rgb(255 255 255 / 0.09);
+  }
 
-.input {
-  width: 100%;
-  background: var(--color-ink);
-  border: 1px solid var(--color-line);
-  border-radius: 0.9rem;
-  padding: 0.85rem 1rem;
-  color: var(--color-text);
-  outline: none;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-.input:focus {
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px rgb(163 255 92 / 0.18);
+  .input {
+    width: 100%;
+    background: var(--color-ink);
+    border: 1px solid var(--color-line);
+    border-radius: 0.9rem;
+    padding: 0.85rem 1rem;
+    color: var(--color-text);
+    outline: none;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .input:focus {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px rgb(163 255 92 / 0.18);
+  }
 }
 
 .scrollbar-thin {
@@ -153,5 +155,12 @@ body {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Leave room for the phone tab bar so it never covers content. */
+@media (width < 40rem) {
+  body:has(.mobile-tabs) {
+    padding-bottom: calc(3.6rem + env(safe-area-inset-bottom));
   }
 }

@@ -46,11 +46,12 @@ export function RoomClient() {
   const [messages, setMessages] = useState<IncomingMessage[]>([]);
   const [typing, setTyping] = useState<Record<string, number>>({});
   const [chatStatus, setChatStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
-  const offset = useRef(0);
+  // Server clock minus ours, so every player's countdown agrees.
+  const [offset, setOffset] = useState(0);
   const versionRef = useRef(0);
 
   const apply = useCallback((v: RoomView) => {
-    offset.current = v.serverNow - Date.now();
+    setOffset(v.serverNow - Date.now());
     if (v.version >= versionRef.current) {
       versionRef.current = v.version;
       setView(v);
@@ -62,6 +63,20 @@ export function RoomClient() {
     if (res.status === 404) return setNotFound(true);
     if (res.ok) apply(await res.json());
   }, [code, apply]);
+
+  // Visitors without a nickname still get to see what kind of room this is (e.g. a shared result).
+  useEffect(() => {
+    if (loading || session) return;
+    let alive = true;
+    fetch(`/api/rooms/${code}`, { cache: "no-store" }).then(async (res) => {
+      if (!alive) return;
+      if (res.status === 404) setNotFound(true);
+      else if (res.ok) apply(await res.json());
+    });
+    return () => {
+      alive = false;
+    };
+  }, [loading, session, code, apply]);
 
   // Join the room once we have an identity.
   useEffect(() => {
@@ -162,6 +177,20 @@ export function RoomClient() {
 
   if (loading) return <Centered><Spinner /></Centered>;
 
+  const outsider = view && !view.you && view.phase !== "lobby";
+  if (outsider && view.phase === "over") return <SharedResult view={view} />;
+  if (outsider) {
+    return (
+      <Centered>
+        <h1 className="font-display text-3xl font-bold">This game already started</h1>
+        <p className="text-muted">Start your own room and send the link to your friends.</p>
+        <Link href="/play/whos-the-bot" className="btn btn-brand">
+          New game
+        </Link>
+      </Centered>
+    );
+  }
+
   if (!session) {
     return (
       <Centered>
@@ -178,17 +207,6 @@ export function RoomClient() {
   if (!view) return <Centered><Spinner /></Centered>;
 
   const me = view.you;
-  if (!me && view.phase !== "lobby") {
-    return (
-      <Centered>
-        <h1 className="font-display text-3xl font-bold">This game already started</h1>
-        <p className="text-muted">Start your own room and send the link to your friends.</p>
-        <Link href="/play/whos-the-bot" className="btn btn-brand">
-          New game
-        </Link>
-      </Centered>
-    );
-  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-grid">
@@ -213,7 +231,7 @@ export function RoomClient() {
       ) : (
         <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-4 p-3 md:grid-cols-[1fr_280px] md:p-4">
           <section className="card relative flex min-h-[70dvh] flex-col overflow-hidden">
-            <PhaseBar view={view} offset={offset.current} />
+            <PhaseBar view={view} offset={offset} />
             <ChatPanel
               messages={gameMessages}
               players={players}
@@ -246,4 +264,37 @@ function Centered({ children }: { children: React.ReactNode }) {
 
 function Spinner() {
   return <div className="h-10 w-10 animate-spin rounded-full border-2 border-line border-t-brand" aria-label="Loading" />;
+}
+
+/** What someone sees when they open a link to a finished game they weren't in. */
+function SharedResult({ view }: { view: RoomView }) {
+  const bot = view.players.find((p) => p.isBot);
+  const humans = view.players.filter((p) => !p.isBot).length;
+  const won = view.winner === "humans";
+  return (
+    <Centered>
+      <p className="font-mono text-sm uppercase tracking-[0.3em] text-muted">Room {view.code} · game over</p>
+      <h1 className={`font-display text-5xl font-black leading-none md:text-6xl ${won ? "text-brand" : "text-hot"}`}>
+        {won ? `${humans} humans caught the bot.` : `The bot fooled ${humans} humans.`}
+      </h1>
+      {bot && (
+        <p className="text-lg text-muted">
+          It was hiding as{" "}
+          <b style={{ color: bot.color }}>
+            {bot.avatar} {bot.alias}
+          </b>
+          {won ? ` and got caught in round ${view.round}.` : ` and lasted all ${view.round} rounds.`}
+        </p>
+      )}
+      <p className="text-muted">Think you&apos;d spot it? Start a room and send the link to your friends.</p>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Link href="/play/whos-the-bot" className="btn btn-brand px-7 py-4 text-lg">
+          Play Who&apos;s the Bot
+        </Link>
+        <Link href="/how-to-play" className="btn btn-ghost px-6 py-4 text-lg">
+          How it works
+        </Link>
+      </div>
+    </Centered>
+  );
 }

@@ -24,6 +24,7 @@ export function Results({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [shared, setShared] = useState(false);
   const bot = view.players.find((p) => p.isBot);
   const humansWon = view.winner === "humans";
   const persona = PERSONAS.find((p) => p.id === view.botPersona);
@@ -42,9 +43,13 @@ export function Results({
     const text = humansWon
       ? `We caught the AI hiding in our group chat in round ${view.round}. Think you can? 🤖`
       : `An AI fooled our whole group chat for ${view.round} rounds. Think you'd spot it? 🤖`;
-    const url = window.location.origin;
+    const url = `${window.location.origin}/r/${view.code}`;
     if (navigator.share) await navigator.share({ title: "Who's the Bot", text, url }).catch(() => {});
-    else await navigator.clipboard.writeText(`${text} ${url}`);
+    else {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      setShared(true);
+      setTimeout(() => setShared(false), 1800);
+    }
   };
 
   return (
@@ -76,7 +81,7 @@ export function Results({
               {busy ? "Creating…" : "Play again"}
             </button>
             <button className="btn btn-ghost" onClick={share}>
-              Share result
+              {shared ? "Copied ✓" : "Share result"}
             </button>
             <Link className="btn btn-ghost" href="/leaderboard">
               Leaderboard

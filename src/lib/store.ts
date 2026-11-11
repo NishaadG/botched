@@ -14,6 +14,8 @@ interface KV {
   incr(key: string, by?: number): Promise<number>;
   zincr(key: string, member: string, by: number): Promise<void>;
   ztop(key: string, n: number): Promise<{ member: string; score: number }[]>;
+  zscore(key: string, member: string): Promise<number>;
+  mget<T>(keys: string[]): Promise<(T | null)[]>;
   sadd(key: string, member: string): Promise<void>;
   scard(key: string): Promise<number>;
 }
@@ -61,6 +63,12 @@ function memoryKV(): KV {
         .sort((a, b) => b.score - a.score)
         .slice(0, n);
     },
+    async zscore(key, member) {
+      return ((live(key)?.v as Record<string, number>) ?? {})[member] ?? 0;
+    },
+    async mget<T>(keys: string[]) {
+      return keys.map((k) => (structuredClone(live(k)?.v) as T) ?? null);
+    },
     async sadd(key, member) {
       const s = new Set((live(key)?.v as string[]) ?? []);
       s.add(member);
@@ -98,6 +106,13 @@ function redisKV(redis: Redis): KV {
       const out: { member: string; score: number }[] = [];
       for (let i = 0; i < raw.length; i += 2) out.push({ member: String(raw[i]), score: Number(raw[i + 1]) });
       return out;
+    },
+    async zscore(key, member) {
+      return Number((await redis.zscore(key, member)) ?? 0);
+    },
+    async mget<T>(keys: string[]) {
+      if (!keys.length) return [];
+      return redis.mget<(T | null)[]>(...keys);
     },
     async sadd(key, member) {
       await redis.sadd(key, member);

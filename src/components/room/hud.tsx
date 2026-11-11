@@ -22,7 +22,8 @@ export function useCountdown(endsAt: number | null, offset: number) {
 
 export function PhaseBar({ view, offset }: { view: RoomView; offset: number }) {
   const left = useCountdown(view.phaseEndsAt, offset);
-  const total = view.phase === "chat" ? 90 : view.phase === "vote" ? 30 : 7;
+  const total =
+    view.phase === "chat" ? view.settings.chatSeconds : view.phase === "vote" ? view.settings.voteSeconds : view.settings.revealSeconds;
   const pct = Math.min(100, (left / total) * 100);
   const urgent = left <= 10 && view.phase !== "reveal";
   return (
@@ -41,7 +42,7 @@ export function PhaseBar({ view, offset }: { view: RoomView; offset: number }) {
           </span>
         </div>
         <span className={`font-mono text-2xl font-bold tabular-nums ${urgent ? "text-hot animate-pulse" : ""}`}>
-          0:{String(left).padStart(2, "0")}
+          {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
         </span>
       </div>
       <div className="h-1 bg-panel-2">

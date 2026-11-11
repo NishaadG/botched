@@ -11,8 +11,9 @@ export async function POST(request: Request) {
   for (let i = 0; i < 5 && (await loadRoom(code)); i++) code = newRoomCode();
 
   const room = createRoom(code, { id: session.uid, name: session.name }, Date.now());
-  // Development only: short timers for automated end-to-end tests.
-  if (process.env.NODE_ENV !== "production" && new URL(request.url).searchParams.get("fast") === "1") {
+  // Short timers for automated end-to-end tests: always in development, in production only when explicitly allowed.
+  const fastAllowed = process.env.NODE_ENV !== "production" || process.env.ALLOW_FAST_ROOMS === "1";
+  if (fastAllowed && new URL(request.url).searchParams.get("fast") === "1") {
     room.settings = { chatSeconds: 25, voteSeconds: 15, revealSeconds: 4 };
   }
   try {

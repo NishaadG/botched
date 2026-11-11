@@ -113,12 +113,12 @@ export function createOpenChannel(channelId: string) {
   return call("/v4/open-channel/create", { channelId, destroyType: 0, ttlMinutes: 10080 });
 }
 
-export function sendOpenText(channelId: string, fromUserId: string, text: string) {
+export function sendOpenText(channelId: string, fromUserId: string, text: string, extra?: Record<string, unknown>) {
   return call("/v4/open-channel/message/send", {
     fromUserId,
     toChannelIds: [channelId],
     messageType: TEXT_MESSAGE,
-    content: JSON.stringify({ content: text }),
+    content: JSON.stringify({ content: text, user: { id: fromUserId, name: "Game Master" }, extra: extra ? JSON.stringify(extra) : undefined }),
     shouldPersist: 1,
   });
 }

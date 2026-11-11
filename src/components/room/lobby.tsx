@@ -10,13 +10,16 @@ export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boole
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [posted, setPosted] = useState<"" | "busy" | "done">("");
   const humans = view.players;
   const canStart = humans.length >= 2;
 
   useEffect(() => {
     const url = `${window.location.origin}/r/${view.code}`;
-    setLink(url);
-    QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: "#0b0a14", light: "#f3f1ff" } }).then(setQr);
+    QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: "#0b0a14", light: "#f3f1ff" } }).then((data) => {
+      setLink(url);
+      setQr(data);
+    });
   }, [view.code]);
 
   const share = async () => {
@@ -28,6 +31,22 @@ export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boole
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     }
+  };
+
+  const postToLounge = async () => {
+    setPosted("busy");
+    const res = await fetch("/api/lounge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: view.code }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok && res.status !== 429) {
+      setError(j.error ?? "Could not post to the lounge.");
+      setPosted("");
+      return;
+    }
+    setPosted("done");
   };
 
   return (
@@ -47,9 +66,14 @@ export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boole
             <p className="text-xs text-muted">Room code</p>
             <p className="font-mono text-3xl font-bold tracking-[0.25em]">{view.code}</p>
           </div>
-          <button className="btn btn-ghost flex-1" onClick={share}>
-            {copied ? "Link copied ✓" : "Share invite link"}
-          </button>
+          <div className="flex flex-1 flex-col gap-2">
+            <button className="btn btn-ghost" onClick={share}>
+              {copied ? "Link copied ✓" : "Share invite link"}
+            </button>
+            <button className="btn btn-ghost py-2 text-sm" onClick={postToLounge} disabled={posted !== ""}>
+              {posted === "done" ? "Posted in the lounge ✓" : posted === "busy" ? "Posting…" : "Find strangers in the lounge"}
+            </button>
+          </div>
         </div>
 
         <div>

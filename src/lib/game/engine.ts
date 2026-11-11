@@ -230,6 +230,7 @@ export function viewFor(room: Room, viewerId: string | null) {
     round: room.round,
     maxRounds: room.maxRounds,
     phaseEndsAt: room.phaseEndsAt,
+    settings: room.settings,
     prompt: room.prompt,
     hostId: room.hostId,
     startedAt: room.startedAt,
