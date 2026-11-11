@@ -195,6 +195,22 @@ function finish(room: Room, winner: "humans" | "bot", now: number): Effect[] {
 }
 
 /** Advances timers. Safe to call often; does nothing until a deadline passes. */
+/** A chat that has been silent this long gets a nudge from one of the AIs. */
+export const NUDGE_AFTER_MS = 18_000;
+
+function quietSince(room: Room) {
+  const roundStart = (room.phaseEndsAt ?? 0) - room.settings.chatSeconds * 1000;
+  const lastLine = room.transcript.filter((l) => l.round === room.round).at(-1)?.at ?? 0;
+  return Math.max(roundStart, lastLine, room.lastNudgeAt ?? 0);
+}
+
+function nudgeDue(room: Room, now: number) {
+  if (room.phase !== "chat" || !room.phaseEndsAt) return false;
+  if (room.phaseEndsAt - now < 10_000) return false; // too close to the vote to bother
+  if (room.bots.some((b) => b.plan || b.thinkingSince)) return false;
+  return now - quietSince(room) >= NUDGE_AFTER_MS;
+}
+
 /** Cheap check so clock ticks only lock and write the room when something is actually due. */
 export function tickDue(room: Room, now: number) {
   if (room.phase === "chat") {
@@ -202,6 +218,7 @@ export function tickDue(room: Room, now: number) {
       const plan = b.plan;
       if (plan && (now >= plan.dueAt || (!plan.typingSent && now >= plan.typingAt))) return true;
     }
+    if (nudgeDue(room, now)) return true;
   }
   return Boolean(room.phaseEndsAt && now >= room.phaseEndsAt && room.phase !== "lobby" && room.phase !== "over");
 }
@@ -220,6 +237,14 @@ export function tick(room: Room, now: number, rand: () => number = Math.random):
         effects.push({ type: "botSay", botId: bot.id, text: bot.plan.text });
         bot.plan = null;
       }
+    }
+  }
+
+  if (nudgeDue(room, now)) {
+    const awake = room.bots.filter((b) => playerById(room, b.id)?.alive);
+    if (awake.length) {
+      room.lastNudgeAt = now;
+      effects.push({ type: "planBot", trigger: "nudge", botId: awake[Math.floor(rand() * awake.length)].id });
     }
   }
 

@@ -117,3 +117,15 @@ test("ticks are only due when a timer ran out or the bot has something to delive
   const lobby = createRoom("QWERT", { id: "a", name: "A" }, T0);
   assert.equal(tickDue(lobby, T0 + 10_000_000), false, "lobbies never tick");
 });
+
+test("a silent chat gets one nudge from an AI, and not again until it goes quiet again", () => {
+  const room = setup(3);
+  assert.deepEqual(tick(room, T0 + 10_000), []);
+  const first = tick(room, T0 + 19_000);
+  assert.deepEqual(first, [{ type: "planBot", trigger: "nudge", botId: "bot1" }]);
+  assert.deepEqual(tick(room, T0 + 25_000), [], "no second nudge right away");
+  addMessage(room, { id: "m1", from: "h1", text: "ok fine", at: T0 + 30_000 }, T0 + 30_000);
+  assert.deepEqual(tick(room, T0 + 40_000), [], "someone spoke recently");
+  assert.equal(tick(room, T0 + 49_000).length, 1, "quiet again, nudge again");
+  assert.deepEqual(tick(room, T0 + 85_000), [], "too close to the vote");
+});

@@ -16,7 +16,7 @@ export function shouldReply(room: Room, botId: string, trigger: "prompt" | "repl
   if (bot.plan || (bot.thinkingSince && now - bot.thinkingSince < 15000)) return false;
   const me = playerById(room, bot.id);
   if (!me?.alive) return false;
-  if (trigger === "prompt") return true;
+  if (trigger === "prompt" || trigger === "nudge") return true;
 
   const persona = personaById(bot.personaId);
   const roundLines = room.transcript.filter((l) => l.round === room.round);
@@ -100,7 +100,9 @@ export async function generateLine(
   const task =
     trigger === "prompt"
       ? `The Game Master just asked everyone: "${room.prompt}". Answer it in character.`
-      : `Continue the conversation naturally. Respond to the latest messages if it makes sense.`;
+      : trigger === "nudge"
+        ? `The chat has gone quiet for a while. Get it going again: ask someone a short question, or add a new take on the prompt.`
+        : `Continue the conversation naturally. Respond to the latest messages if it makes sense.`;
   try {
     const out = await completeJSON<BotLine>(
       [

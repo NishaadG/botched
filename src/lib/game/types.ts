@@ -80,6 +80,8 @@ export interface Room {
   statsRecorded?: boolean;
   /** Code of the follow-up room, once someone starts a rematch. */
   rematch?: string;
+  /** Last time an AI was asked to break a silence. */
+  lastNudgeAt?: number;
 }
 
 /** Side-effects the engine asks the runner to perform. */
