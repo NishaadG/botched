@@ -20,7 +20,11 @@ const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? "chr
 const errors = [];
 const players = [];
 for (const name of NAMES) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  // The second player is on a phone, the rest on laptops.
+  const phone = name === NAMES[1];
+  const ctx = await browser.newContext(
+    phone ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 800 } },
+  );
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${name}: ${e.message}`));
   page.on("console", (m) => {
@@ -66,7 +70,10 @@ for (let round = 1; round <= 5; round++) {
     async () => (await host.page.innerText("body")).includes("Game over"),
   );
   if (over) break;
-  if (round === 1) await host.page.screenshot({ path: `${OUT}/3-vote.png` });
+  if (round === 1) {
+    await host.page.screenshot({ path: `${OUT}/3-vote.png` });
+    await guests[0].page.screenshot({ path: `${OUT}/3b-vote-phone.png` });
+  }
   for (const p of players) {
     const btn = p.page.locator(".absolute.inset-x-0 button").first();
     if (await btn.count()) await btn.click().catch(() => {});

@@ -40,6 +40,14 @@ export function PhaseBar({ view, offset }: { view: RoomView; offset: number }) {
           >
             {PHASE_LABEL[view.phase] ?? view.phase}
           </span>
+          {view.you && (
+            <span
+              className="truncate rounded-full border px-2.5 py-1 text-xs font-semibold md:hidden"
+              style={{ color: view.you.color, borderColor: `${view.you.color}66` }}
+            >
+              {view.you.avatar} {view.you.alias}
+            </span>
+          )}
         </div>
         <span className={`font-mono text-2xl font-bold tabular-nums ${urgent ? "text-hot animate-pulse" : ""}`}>
           {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}

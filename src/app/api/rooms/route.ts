@@ -2,10 +2,14 @@ import { createRoom } from "@/lib/game/engine";
 import { loadRoom, newRoomCode, saveRoom } from "@/lib/game/runner";
 import { createGroupChannel } from "@/lib/nexconn-server";
 import { getSession } from "@/lib/session";
+import { limited } from "@/lib/store";
 
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) return Response.json({ error: "Choose a nickname first." }, { status: 401 });
+  if (await limited(`rooms:${session.uid}`, 15, 600)) {
+    return Response.json({ error: "You've opened a lot of rooms. Take a breather and try again soon." }, { status: 429 });
+  }
 
   let code = newRoomCode();
   for (let i = 0; i < 5 && (await loadRoom(code)); i++) code = newRoomCode();

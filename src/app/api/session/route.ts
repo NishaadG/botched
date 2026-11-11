@@ -1,7 +1,7 @@
 import { issueAccessToken } from "@/lib/nexconn-server";
 import { cleanName, getSession, newUserId, saveSession } from "@/lib/session";
 import { dayKey } from "@/lib/stats";
-import { kv } from "@/lib/store";
+import { clientIp, kv, limited } from "@/lib/store";
 
 export async function GET() {
   const session = await getSession();
@@ -21,6 +21,10 @@ export async function POST(request: Request) {
   if (name.length < 2) return Response.json({ error: "Pick a nickname with at least 2 characters." }, { status: 400 });
 
   const existing = await getSession();
+  // New guest identities are real chat users, so cap how fast one address can create them.
+  if (!existing && (await limited(`session:${clientIp(request)}`, 60, 600))) {
+    return Response.json({ error: "Too many new players from this network. Try again in a few minutes." }, { status: 429 });
+  }
   const uid = existing?.uid ?? newUserId();
   try {
     const token = existing && existing.name === name ? existing.token : await issueAccessToken(uid, name);

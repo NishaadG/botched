@@ -141,6 +141,11 @@ export function RoomClient() {
     return () => clearInterval(id);
   }, [session, phase, isHost, code, apply]);
 
+  // A short buzz on phones when voting opens, so nobody misses it.
+  useEffect(() => {
+    if (phase === "vote" && "vibrate" in navigator) navigator.vibrate?.(80);
+  }, [phase]);
+
   // Closing the tab in the lobby frees the seat (a reload simply rejoins).
   useEffect(() => {
     if (phase !== "lobby" || !session) return;

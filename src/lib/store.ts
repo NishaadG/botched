@@ -12,6 +12,8 @@ interface KV {
   lock(key: string, ttlMs: number): Promise<boolean>;
   unlock(key: string): Promise<void>;
   incr(key: string, by?: number): Promise<number>;
+  /** Counter that expires `ttlSeconds` after its first increment (fixed-window rate limits). */
+  hit(key: string, ttlSeconds: number): Promise<number>;
   zincr(key: string, member: string, by: number): Promise<void>;
   ztop(key: string, n: number): Promise<{ member: string; score: number }[]>;
   zscore(key: string, member: string): Promise<number>;
@@ -52,6 +54,12 @@ function memoryKV(): KV {
     async incr(key, by = 1) {
       const n = Number(live(key)?.v ?? 0) + by;
       m.set(key, { v: n });
+      return n;
+    },
+    async hit(key, ttl) {
+      const e = live(key);
+      const n = Number(e?.v ?? 0) + 1;
+      m.set(key, { v: n, exp: e?.exp ?? Date.now() + ttl * 1000 });
       return n;
     },
     async zincr(key, member, by) {
@@ -108,6 +116,11 @@ function redisKV(redis: Redis): KV {
     async incr(key, by = 1) {
       return redis.incrby(key, by);
     },
+    async hit(key, ttl) {
+      const n = await redis.incr(key);
+      if (n === 1) await redis.expire(key, ttl);
+      return n;
+    },
     async zincr(key, member, by) {
       await redis.zincrby(key, by, member);
     },
@@ -144,3 +157,12 @@ export const kv: KV =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
     ? redisKV(Redis.fromEnv())
     : memoryKV();
+
+/** True when `key` has been hit more than `limit` times in the current window. */
+export async function limited(key: string, limit: number, windowSeconds: number) {
+  return (await kv.hit(`rl:${key}`, windowSeconds)) > limit;
+}
+
+export function clientIp(request: Request) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "local";
+}
