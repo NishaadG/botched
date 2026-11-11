@@ -43,7 +43,7 @@ export async function getGlobalStats() {
   };
 }
 
-export type BoardKey = "catches" | "games" | "survived";
+export type BoardKey = "catches" | "games" | "survived" | "impostors";
 
 export async function getBoard(key: BoardKey, n = 20) {
   await connection();

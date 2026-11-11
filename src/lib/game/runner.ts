@@ -168,6 +168,7 @@ async function recordStats(code: string) {
       await kv.zincr("lb:games", p.id, 1);
       if (caught) await kv.zincr("lb:catches", p.id, 1);
       if (!solo && humansWon && p.alive) await kv.zincr("lb:survived", p.id, 1);
+      if (solo && humansWon) await kv.zincr("lb:impostors", p.id, 1);
       await kv.set(`name:${p.id}`, p.name);
       const rec = (await kv.get<PlayerRecord>(`player:${p.id}`)) ?? emptyRecord();
       rec.games += 1;

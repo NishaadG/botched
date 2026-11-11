@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 const BOARDS: { key: BoardKey; title: string; unit: string; blurb: string }[] = [
   { key: "catches", title: "Bot hunters", unit: "catches", blurb: "Voted for the bot in the round it got caught." },
   { key: "survived", title: "Still standing", unit: "wins", blurb: "Survived to the end of a game the humans won." },
+  { key: "impostors", title: "Best impersonators", unit: "wins", blurb: "Passed as a bot in solo games against three AIs." },
   { key: "games", title: "Regulars", unit: "games", blurb: "Most games finished." },
 ];
 
@@ -77,7 +78,7 @@ export default function Leaderboard() {
         <Suspense fallback={<LiveStatsSkeleton />}>
           <LiveStats />
         </Suspense>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {BOARDS.map((b) => (
             <section key={b.key} className="card flex flex-col gap-4 p-5">
               <div>
