@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ANDROID_APK_URL } from "@/lib/constants";
 import { Logo } from "./nav";
 
 export function Footer() {
@@ -16,6 +17,9 @@ export function Footer() {
           <Link href="/leaderboard" className="hover:text-text">Leaderboard</Link>
           <Link href="/stats" className="hover:text-text">Live stats</Link>
           <Link href="/me" className="hover:text-text">Your stats</Link>
+          <a href={ANDROID_APK_URL} className="hover:text-text">
+            Android app
+          </a>
         </nav>
       </div>
     </footer>

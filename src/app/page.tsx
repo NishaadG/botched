@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer";
 import { LiveStats, LiveStatsSkeleton } from "@/components/hub/live-stats";
 import { DemoChat } from "@/components/landing/demo-chat";
 import { Nav } from "@/components/nav";
+import { ANDROID_APK_URL } from "@/lib/constants";
 
 const STEPS = [
   {
@@ -126,6 +127,9 @@ export default function Home() {
               <Link href="/lounge" className="btn btn-ghost px-6 py-4 text-lg">
                 Find players
               </Link>
+              <a href={ANDROID_APK_URL} className="btn btn-ghost px-6 py-4 text-lg">
+                Get the Android app
+              </a>
             </div>
           </div>
         </section>

@@ -62,6 +62,11 @@ flowchart LR
 - The bot's thinking runs after the response is sent (`after()`), so player requests stay fast.
 - The host's browser drives the round clock; every other client is a slower backup, so a game keeps going if the host drops.
 
+## Android app
+
+The Android app is a Trusted Web Activity built from the installable web app (Bubblewrap), so it is always up to date with the site.
+Download the latest APK from [Releases](https://github.com/NishaadG/botched/releases/latest). The site serves `/.well-known/assetlinks.json` so the app opens full screen.
+
 ## Run it locally
 
 Requirements: Node 20+, a Nexconn app (App Key + Secret).
