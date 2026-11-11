@@ -28,22 +28,27 @@ export function Results({
   const [shared, setShared] = useState(false);
   const bot = view.players.find((p) => p.isBot);
   const humansWon = view.winner === "humans";
+  const solo = view.mode === "reverse";
   const persona = PERSONAS.find((p) => p.id === view.botPersona);
   const meId = view.you?.id ?? "";
   const botLines = messages.filter((m) => m.from === bot?.id).length;
 
   const rematch = async () => {
     setBusy(true);
-    const res = await fetch("/api/rooms", { method: "POST" });
+    const res = await fetch(solo ? "/api/rooms?mode=reverse" : "/api/rooms", { method: "POST" });
     const j = await res.json();
     if (res.ok) router.push(`/r/${j.code}`);
     setBusy(false);
   };
 
   const share = async () => {
-    const text = humansWon
-      ? `We caught the AI hiding in our group chat in round ${view.round}. Think you can? 🤖`
-      : `An AI fooled our whole group chat for ${view.round} rounds. Think you'd spot it? 🤖`;
+    const text = solo
+      ? humansWon
+        ? `I hid among 3 AIs for ${view.round} rounds and they never found the human. Can you? 🤖`
+        : `3 AIs sniffed out that I was human in round ${view.round}. Can you pass as a bot? 🤖`
+      : humansWon
+        ? `We caught the AI hiding in our group chat in round ${view.round}. Think you can? 🤖`
+        : `An AI fooled our whole group chat for ${view.round} rounds. Think you'd spot it? 🤖`;
     const url = `${window.location.origin}/r/${view.code}`;
     if (navigator.share) await navigator.share({ title: "Who's the Bot", text, url }).catch(() => {});
     else {
@@ -63,9 +68,9 @@ export function Results({
         >
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-muted">Game over · {view.round} rounds</p>
           <h1 className={`mt-2 font-display text-5xl font-black leading-none md:text-6xl ${humansWon ? "text-brand" : "text-hot"}`}>
-            {humansWon ? "Humans win." : "The bot wins."}
+            {solo ? (humansWon ? "You passed as a bot." : "They found the human.") : humansWon ? "Humans win." : "The bot wins."}
           </h1>
-          {bot && (
+          {bot && !solo && (
             <div className="mt-6 flex items-center gap-4 rounded-2xl border border-line bg-ink p-4">
               <Avatar p={{ ...bot, alive: true }} size={60} />
               <div>
@@ -109,7 +114,7 @@ export function Results({
 
         {view.botThoughts.length > 0 && (
           <div className="card p-5">
-            <p className="mb-3 text-xs uppercase tracking-widest text-muted">The bot&apos;s inner thoughts</p>
+            <p className="mb-3 text-xs uppercase tracking-widest text-muted">{solo ? "What the AIs were thinking" : <>The bot&apos;s inner thoughts</>}</p>
             <ol className="space-y-2">
               {view.botThoughts.map((t, i) => (
                 <motion.li
@@ -120,6 +125,7 @@ export function Results({
                   className="flex gap-3 text-sm"
                 >
                   <span className="font-mono text-xs text-muted">R{t.round}</span>
+                  {solo && "alias" in t && <span className="shrink-0 text-xs font-semibold">{String(t.alias)}</span>}
                   <span className="italic">“{t.text}”</span>
                 </motion.li>
               ))}

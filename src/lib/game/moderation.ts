@@ -13,7 +13,7 @@ export function codeFromChannel(channelId: string) {
  */
 export function allowGameMessage(room: Room | null, userId: string) {
   if (!room) return true; // Unknown room: don't interfere.
-  if (userId === GM_ID || userId === room.bot?.id) return true;
+  if (userId === GM_ID || room.bots?.some((b) => b.id === userId)) return true;
   const p = room.players.find((x) => x.id === userId);
   return Boolean(p && p.alive && room.phase === "chat");
 }

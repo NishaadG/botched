@@ -5,7 +5,8 @@ const fmt = (n: number) => new Intl.NumberFormat("en", { notation: n > 9999 ? "c
 /** Live counters straight from the game store. Nothing here is seeded. */
 export async function LiveStats({ compact = false }: { compact?: boolean }) {
   const s = await getGlobalStats();
-  const botRate = s.games ? Math.round((s.botWins / s.games) * 100) : null;
+  const classic = s.humanWins + s.botWins;
+  const botRate = classic ? Math.round((s.botWins / classic) * 100) : null;
   const items = [
     { label: "games played", value: fmt(s.games) },
     { label: "players so far", value: fmt(Math.max(s.players, s.visitors)) },

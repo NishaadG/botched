@@ -55,6 +55,7 @@ export default function Hub() {
               <li className="rounded-full border border-line px-3 py-1">2 to 8 players</li>
               <li className="rounded-full border border-line px-3 py-1">~5 minutes</li>
               <li className="rounded-full border border-line px-3 py-1">Social deduction</li>
+              <li className="rounded-full border border-brand/50 px-3 py-1 text-brand">Solo mode: 1 human vs 3 AIs</li>
             </ul>
             <span className="btn btn-brand mt-7 px-7 py-4 text-lg">Play now →</span>
           </div>

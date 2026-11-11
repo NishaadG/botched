@@ -57,7 +57,12 @@ export default function Home() {
                 How it works
               </Link>
             </div>
-            <p className="mt-4 text-sm text-muted">2 to 8 players · 5 minutes · works on any phone</p>
+            <p className="mt-4 text-sm text-muted">
+              2 to 8 players · 5 minutes · works on any phone ·{" "}
+              <Link href="/play/whos-the-bot" className="text-cool hover:underline">
+                alone? play solo vs 3 AIs
+              </Link>
+            </p>
           </div>
           <DemoChat />
         </section>

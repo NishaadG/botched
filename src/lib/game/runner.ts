@@ -2,12 +2,12 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { after } from "next/server";
 import { chooseVote, generateLine, shouldReply, timing } from "../bot/brain";
-import { personaById, PERSONAS } from "../bot/personas";
+import { AI_PERSONAS, personaById, PERSONAS } from "../bot/personas";
 import { sendGroupEvent, sendGroupText } from "../nexconn-server";
 import { kv } from "../store";
 import { dayKey, emptyRecord, type PlayerRecord } from "../stats";
-import { addMessage, castVote, GameError } from "./engine";
-import type { Effect, Room } from "./types";
+import { addMessage, alive, botById, castVote, GameError } from "./engine";
+import { BOT_COUNT, type Effect, type Mode, type Room } from "./types";
 
 import { GM_ID } from "../constants";
 export { GM_ID };
@@ -28,11 +28,13 @@ export function newRoomCode() {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
-export function newBot() {
-  return {
+/** Fresh AI players for a game. Ids look exactly like human ids, so nothing gives them away. */
+export function newBots(mode: Mode) {
+  const pool = [...(mode === "reverse" ? AI_PERSONAS : PERSONAS)].sort(() => Math.random() - 0.5);
+  return Array.from({ length: BOT_COUNT[mode] }, (_, i) => ({
     id: "p_" + randomBytes(6).toString("base64url").replace(/[-_]/g, "x").toLowerCase(),
-    personaId: PERSONAS[Math.floor(Math.random() * PERSONAS.length)].id,
-  };
+    personaId: pool[i % pool.length].id,
+  }));
 }
 
 async function withLock<T>(code: string, fn: () => Promise<T>): Promise<T> {
@@ -62,11 +64,12 @@ export async function mutate(code: string, fn: (room: Room, now: number) => Effe
     const before = JSON.stringify(room);
     const effects = await fn(room, now);
     for (const e of effects) {
-      if (e.type === "botSay" && room.bot) {
+      const bot = e.type === "botSay" ? botById(room, e.botId) : undefined;
+      if (e.type === "botSay" && bot) {
         const id = `bot_${now}_${Math.random().toString(36).slice(2, 7)}`;
-        addMessage(room, { id, from: room.bot.id, text: e.text, at: now }, now);
-        room.bot.lastSpokeAt = now;
-        room.bot.linesThisRound += 1;
+        addMessage(room, { id, from: bot.id, text: e.text, at: now }, now);
+        bot.lastSpokeAt = now;
+        bot.linesThisRound += 1;
       }
     }
     // Skip the write when nothing changed (most clock ticks), to save database commands.
@@ -82,10 +85,13 @@ async function perform(room: Room, effects: Effect[]) {
     try {
       if (e.type === "gm") await sendGroupText(room.channelId, GM_ID, e.text);
       else if (e.type === "event") await sendGroupEvent(room.channelId, GM_ID, { ...e.event, v: room.version });
-      else if (e.type === "botSay" && room.bot) await sendGroupText(room.channelId, room.bot.id, e.text);
-      else if (e.type === "botTyping" && room.bot) await sendGroupEvent(room.channelId, room.bot.id, { kind: "typing" }, false);
-      else if (e.type === "planBot") after(() => planBot(room.code, e.trigger));
-      else if (e.type === "botVote") after(() => botVote(room.code));
+      else if (e.type === "botSay") await sendGroupText(room.channelId, e.botId, e.text);
+      else if (e.type === "botTyping") await sendGroupEvent(room.channelId, e.botId, { kind: "typing" }, false);
+      else if (e.type === "planBot") {
+        const ids = e.botId ? [e.botId] : room.bots.map((b) => b.id);
+        // Each AI decides on its own, a beat apart, so they don't all pile in at once.
+        ids.forEach((id, i) => after(() => delay(i * 700).then(() => planBot(room.code, id, e.trigger))));
+      } else if (e.type === "botVote") room.bots.forEach((b) => after(() => botVote(room.code, b.id)));
       else if (e.type === "gameOver") after(() => recordStats(room.code));
     } catch (err) {
       console.error("[runner] effect failed", e.type, err);
@@ -93,20 +99,22 @@ async function perform(room: Room, effects: Effect[]) {
   }
 }
 
-async function planBot(code: string, trigger: "prompt" | "reply" | "nudge") {
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function planBot(code: string, botId: string, trigger: "prompt" | "reply" | "nudge") {
   let snapshot: Room | null = null;
   await mutate(code, (room, now) => {
-    if (shouldReply(room, trigger, now)) {
-      room.bot!.thinkingSince = now;
+    if (shouldReply(room, botId, trigger, now)) {
+      botById(room, botId)!.thinkingSince = now;
       snapshot = structuredClone(room);
     }
     return [];
   });
   if (!snapshot) return;
   const s = snapshot as Room;
-  const line = await generateLine(s, trigger);
+  const line = await generateLine(s, botId, trigger);
   await mutate(code, (room, now) => {
-    const bot = room.bot;
+    const bot = botById(room, botId);
     if (!bot) return [];
     bot.thinkingSince = null;
     if (room.phase !== "chat" || room.round !== s.round || bot.plan) return [];
@@ -118,18 +126,19 @@ async function planBot(code: string, trigger: "prompt" | "reply" | "nudge") {
   });
 }
 
-async function botVote(code: string) {
+async function botVote(code: string, botId: string) {
   const room = await loadRoom(code);
-  if (!room?.bot || room.phase !== "vote") return;
-  if (!room.players.find((p) => p.id === room.bot!.id)?.alive) return;
-  const { targetId, thought } = await chooseVote(room);
-  // Humans take a few seconds to vote, so the bot does too.
-  await new Promise((r) => setTimeout(r, 3000 + Math.random() * 6000));
+  if (!room || room.phase !== "vote" || !botById(room, botId)) return;
+  if (!alive(room).some((p) => p.id === botId)) return;
+  const { targetId, thought } = await chooseVote(room, botId);
+  // Humans take a few seconds to vote, so the bots do too.
+  await delay(3000 + Math.random() * 6000);
   await mutate(code, (r, now) => {
-    if (r.phase !== "vote" || !r.bot || r.votes[r.bot.id]) return [];
-    if (thought) r.bot.thoughts.push({ at: now, round: r.round, text: `Vote: ${thought}` });
+    const bot = botById(r, botId);
+    if (r.phase !== "vote" || !bot || r.votes[botId]) return [];
+    if (thought) bot.thoughts.push({ at: now, round: r.round, text: `Vote: ${thought}` });
     try {
-      return castVote(r, r.bot.id, targetId, now);
+      return castVote(r, botId, targetId, now);
     } catch {
       return [];
     }
@@ -141,22 +150,24 @@ async function recordStats(code: string) {
     if (room.statsRecorded) return [];
     room.statsRecorded = true;
     const humansWon = room.winner === "humans";
+    const solo = room.mode === "reverse";
     const final = room.eliminations.at(-1);
     const humans = room.players.filter((x) => !x.isBot);
-    const botAlias = room.players.find((x) => x.isBot)?.alias ?? "";
+    const botAlias = solo ? "3 AIs (solo)" : room.players.find((x) => x.isBot)?.alias ?? "";
     await kv.incr("stats:games");
-    await kv.incr(humansWon ? "stats:humanWins" : "stats:botWins");
+    if (solo) await kv.incr(humansWon ? "stats:soloSurvived" : "stats:soloCaught");
+    else await kv.incr(humansWon ? "stats:humanWins" : "stats:botWins");
     await kv.incr("stats:messages", room.transcript.length);
     const day = dayKey();
     await kv.incr(`day:games:${day}`);
     await kv.incr(`day:messages:${day}`, room.transcript.length);
     for (const p of humans) {
-      const caught = humansWon && !!final && room.votes[p.id] === final.playerId;
+      const caught = !solo && humansWon && !!final && room.votes[p.id] === final.playerId;
       await kv.sadd("stats:players", p.id);
       await kv.sadd(`day:players:${day}`, p.id);
       await kv.zincr("lb:games", p.id, 1);
       if (caught) await kv.zincr("lb:catches", p.id, 1);
-      if (humansWon && p.alive) await kv.zincr("lb:survived", p.id, 1);
+      if (!solo && humansWon && p.alive) await kv.zincr("lb:survived", p.id, 1);
       await kv.set(`name:${p.id}`, p.name);
       const rec = (await kv.get<PlayerRecord>(`player:${p.id}`)) ?? emptyRecord();
       rec.games += 1;

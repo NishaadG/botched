@@ -30,7 +30,7 @@ test("pre-messaging lets living players talk only during the chat phase", () => 
   join(room, { id: "h1", name: "Kabir" }, T0);
   join(room, { id: "h2", name: "Meera" }, T0);
   assert.equal(allowGameMessage(room, "h0"), false, "no chat in the lobby");
-  start(room, "h0", { id: "bot1", personaId: "chill" }, T0);
+  start(room, "h0", [{ id: "bot1", personaId: "chill" }], T0);
   assert.equal(allowGameMessage(room, "h1"), true);
   assert.equal(allowGameMessage(room, "stranger"), false);
   assert.equal(allowGameMessage(room, "gm_botched"), true);

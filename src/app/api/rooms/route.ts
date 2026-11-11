@@ -10,14 +10,15 @@ export async function POST(request: Request) {
   let code = newRoomCode();
   for (let i = 0; i < 5 && (await loadRoom(code)); i++) code = newRoomCode();
 
-  const room = createRoom(code, { id: session.uid, name: session.name }, Date.now());
+  const mode = new URL(request.url).searchParams.get("mode") === "reverse" ? "reverse" : "classic";
+  const room = createRoom(code, { id: session.uid, name: session.name }, Date.now(), mode);
   // Short timers for automated end-to-end tests: always in development, in production only when explicitly allowed.
   const fastAllowed = process.env.NODE_ENV !== "production" || process.env.ALLOW_FAST_ROOMS === "1";
   if (fastAllowed && new URL(request.url).searchParams.get("fast") === "1") {
     room.settings = { chatSeconds: 25, voteSeconds: 15, revealSeconds: 4 };
   }
   try {
-    await createGroupChannel(room.channelId, session.uid, `Who's the Bot · ${code}`, [session.uid]);
+    await createGroupChannel(room.channelId, session.uid, `${mode === "reverse" ? "Who's the Human" : "Who's the Bot"} · ${code}`, [session.uid]);
   } catch (err) {
     console.error("[rooms] group create failed", err);
     return Response.json({ error: "Could not open a chat room. Try again." }, { status: 502 });

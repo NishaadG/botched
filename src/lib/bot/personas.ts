@@ -43,4 +43,36 @@ export const PERSONAS: Persona[] = [
   },
 ];
 
-export const personaById = (id: string) => PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];
+/** Characters for the AIs in reverse mode ("Who's the Human"): they sound like models on purpose. */
+export const AI_PERSONAS: Persona[] = [
+  {
+    id: "assistant",
+    label: "Polite assistant",
+    style: "An overly polite AI assistant. Calm, tidy sentences, occasional disclaimers like 'As an AI'.",
+    lowercase: false,
+    typoRate: 0,
+    typingSpeed: 14,
+    chattiness: 0.6,
+  },
+  {
+    id: "analyst",
+    label: "Overconfident analyst",
+    style: "A smug analytical model that quotes made-up statistics and probabilities about everything.",
+    lowercase: false,
+    typoRate: 0,
+    typingSpeed: 16,
+    chattiness: 0.55,
+  },
+  {
+    id: "literal",
+    label: "Very literal robot",
+    style: "A literal-minded robot that takes every question at face value and reports in short status updates.",
+    lowercase: false,
+    typoRate: 0,
+    typingSpeed: 12,
+    chattiness: 0.5,
+  },
+];
+
+export const personaById = (id: string) =>
+  PERSONAS.find((p) => p.id === id) ?? AI_PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];

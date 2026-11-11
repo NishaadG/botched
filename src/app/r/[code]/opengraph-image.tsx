@@ -12,6 +12,11 @@ export default async function Image({ params }: { params: Promise<{ code: string
   const room = await loadRoom(code.toUpperCase());
   const humans = room?.players.filter((p) => !p.isBot).length ?? 0;
 
+  if (room?.phase === "over" && room.mode === "reverse") {
+    return room.winner === "humans"
+      ? ogCard({ kicker: "Who's the Human", title: "A human fooled", accent: "three AIs.", sub: "Solo mode: hide among AIs that are hunting you. Could you pass as a bot?" })
+      : ogCard({ kicker: "Who's the Human", title: "Three AIs found", accent: "the human.", sub: "Solo mode: hide among AIs that are hunting you. Could you pass as a bot?", tone: "hot" });
+  }
   if (room?.phase === "over") {
     const bot = room.players.find((p) => p.isBot);
     return room.winner === "humans"

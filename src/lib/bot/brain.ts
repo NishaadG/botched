@@ -1,8 +1,8 @@
 import "server-only";
-import { alive, playerById } from "../game/engine";
-import type { Room } from "../game/types";
+import { alive, botById, isReverse, playerById } from "../game/engine";
+import type { BotState, Room } from "../game/types";
 import { completeJSON } from "./llm";
-import { offlineLine, promptIndexOf, VOTE_THOUGHTS } from "./offline";
+import { humanScore, offlineLine, promptIndexOf, REVERSE_VOTE_THOUGHTS, VOTE_THOUGHTS } from "./offline";
 import { personaById, type Persona } from "./personas";
 
 /**
@@ -10,8 +10,8 @@ import { personaById, type Persona } from "./personas";
  * WHAT to say (LLM, in persona), and WHEN (thinking pause + typing time).
  */
 
-export function shouldReply(room: Room, trigger: "prompt" | "reply" | "nudge", now: number, rand = Math.random) {
-  const bot = room.bot;
+export function shouldReply(room: Room, botId: string, trigger: "prompt" | "reply" | "nudge", now: number, rand = Math.random) {
+  const bot = botById(room, botId);
   if (!bot || room.phase !== "chat") return false;
   if (bot.plan || (bot.thinkingSince && now - bot.thinkingSince < 15000)) return false;
   const me = playerById(room, bot.id);
@@ -21,6 +21,7 @@ export function shouldReply(room: Room, trigger: "prompt" | "reply" | "nudge", n
   const persona = personaById(bot.personaId);
   const roundLines = room.transcript.filter((l) => l.round === room.round);
   const last = roundLines.at(-1);
+  if (last?.from === bot.id) return false;
   const addressed = last ? mentionsMe(last.text, me.alias) : false;
   if (addressed) return true;
   if (now - bot.lastSpokeAt < 5000) return false;
@@ -38,23 +39,36 @@ function mentionsMe(text: string, alias: string) {
   return t.includes(first) || t.includes(second) || /\b(bot|ai|robot|chatgpt)\b/.test(t);
 }
 
-function transcriptFor(room: Room) {
+function transcriptFor(room: Room, bot: BotState) {
   const lines = room.transcript.slice(-30);
   return lines
     .map((l) => {
       const p = playerById(room, l.from);
-      const who = p?.id === room.bot?.id ? `${p?.alias} (you)` : p?.alias ?? "someone";
+      const who = p?.id === bot.id ? `${p?.alias} (you)` : p?.alias ?? "someone";
       return `${who}: ${l.text}`;
     })
     .join("\n");
 }
 
-function systemPrompt(room: Room, persona: Persona) {
-  const me = playerById(room, room.bot!.id)!;
+function systemPrompt(room: Room, bot: BotState, persona: Persona) {
+  const me = playerById(room, bot.id)!;
   const others = alive(room)
     .filter((p) => p.id !== me.id)
     .map((p) => p.alias)
     .join(", ");
+  if (isReverse(room)) {
+    return [
+      `You are one of several AIs in a party chat game called "Who's the Human". Exactly one player is a real human pretending to be an AI. Your team wins by voting the human out.`,
+      `Your alias is "${me.alias}". The other players still in the game are: ${others}.`,
+      `Your character: ${persona.style}`,
+      `Rules for how you write:`,
+      `- Sound like an AI model: tidy grammar, proper capitalisation, calm and slightly formal. 4 to 20 words.`,
+      `- Answer the prompt the way a language model would, maybe with a fake statistic or a disclaimer.`,
+      `- Hunt for the human: call out typos, slang, emotional reactions, oddly specific personal memories or slow, messy replies. Refer to players by the first word of their alias.`,
+      `- If you are accused of being human, respond with calm, robotic logic.`,
+      `Respond with JSON only: {"say": "<your chat message, or empty string to stay quiet>", "thought": "<your private analysis in under 15 words, shown to players after the game>"}`,
+    ].join("\n");
+  }
   return [
     `You are secretly the AI in a party chat game called "Who's the Bot". Everyone else is a real human trying to find you. If they vote you out, you lose. You must pass as a normal human player.`,
     `Your alias in this game is "${me.alias}". The other players still in the game are: ${others}.`,
@@ -75,8 +89,14 @@ export interface BotLine {
   thought: string;
 }
 
-export async function generateLine(room: Room, trigger: "prompt" | "reply" | "nudge", rand = Math.random): Promise<BotLine> {
-  const persona = personaById(room.bot!.personaId);
+export async function generateLine(
+  room: Room,
+  botId: string,
+  trigger: "prompt" | "reply" | "nudge",
+  rand = Math.random,
+): Promise<BotLine> {
+  const bot = botById(room, botId)!;
+  const persona = personaById(bot.personaId);
   const task =
     trigger === "prompt"
       ? `The Game Master just asked everyone: "${room.prompt}". Answer it in character.`
@@ -84,27 +104,27 @@ export async function generateLine(room: Room, trigger: "prompt" | "reply" | "nu
   try {
     const out = await completeJSON<BotLine>(
       [
-        { role: "system", content: systemPrompt(room, persona) },
+        { role: "system", content: systemPrompt(room, bot, persona) },
         {
           role: "user",
-          content: `Round ${room.round}. Prompt: "${room.prompt}"\n\nChat so far:\n${transcriptFor(room) || "(nobody has said anything yet)"}\n\n${task}`,
+          content: `Round ${room.round}. Prompt: "${room.prompt}"\n\nChat so far:\n${transcriptFor(room, bot) || "(nobody has said anything yet)"}\n\n${task}`,
         },
       ],
       { temperature: 1, maxTokens: 160 },
     );
     return { say: humanize(String(out.say ?? ""), persona, rand), thought: String(out.thought ?? "").slice(0, 140) };
   } catch {
-    const line = offlineLine(offlineContext(room, trigger), rand);
+    const line = offlineLine(offlineContext(room, bot, trigger), rand);
     return { say: humanize(line.say, persona, rand), thought: line.thought };
   }
 }
 
-function offlineContext(room: Room, trigger: "prompt" | "reply" | "nudge") {
-  const bot = room.bot!;
+function offlineContext(room: Room, bot: BotState, trigger: "prompt" | "reply" | "nudge") {
   const me = playerById(room, bot.id)!;
   const lastLine = [...room.transcript].reverse().find((l) => l.from !== bot.id && l.round === room.round);
   const lastFrom = lastLine ? playerById(room, lastLine.from) : undefined;
   return {
+    mode: room.mode ?? "classic",
     promptIndex: promptIndexOf(room.prompt),
     trigger,
     myAlias: me.alias,
@@ -112,7 +132,8 @@ function offlineContext(room: Room, trigger: "prompt" | "reply" | "nudge") {
     others: alive(room)
       .filter((p) => p.id !== bot.id)
       .map((p) => p.alias),
-    said: room.transcript.filter((l) => l.from === bot.id).map((l) => l.text),
+    // In solo mode the AIs share one memory, so they never echo each other.
+    said: room.transcript.filter((l) => l.from === bot.id || (isReverse(room) && room.bots.some((b) => b.id === l.from))).map((l) => l.text),
   };
 }
 
@@ -143,10 +164,21 @@ export function timing(text: string, persona: Persona, trigger: "prompt" | "repl
   return { typingAt, dueAt: typingAt + Math.max(1200, typeMs) };
 }
 
-export async function chooseVote(room: Room, rand = Math.random): Promise<{ targetId: string; thought: string }> {
-  const me = playerById(room, room.bot!.id)!;
+export async function chooseVote(room: Room, botId: string, rand = Math.random): Promise<{ targetId: string; thought: string }> {
+  const bot = botById(room, botId)!;
+  const me = playerById(room, bot.id)!;
   const options = alive(room).filter((p) => p.id !== me.id);
   const fallback = () => {
+    if (isReverse(room)) {
+      // Play fair: no peeking at who is human. Score everyone's messages for human tells instead.
+      const scored = options
+        .map((o) => ({ id: o.id, score: humanScore(room.transcript.filter((l) => l.from === o.id).map((l) => l.text)) }))
+        .sort((a, b) => b.score - a.score);
+      const best = scored[0]?.score > 0 ? scored[0].id : options[Math.floor(rand() * options.length)].id;
+      const alias = options.find((o) => o.id === best)?.alias ?? "them";
+      const reason = REVERSE_VOTE_THOUGHTS[Math.floor(rand() * REVERSE_VOTE_THOUGHTS.length)];
+      return { targetId: best, thought: `${alias}. ${reason}` };
+    }
     // Blend in: go with the crowd if there is one, otherwise pick someone at random.
     const counts: Record<string, number> = {};
     for (const t of Object.values(room.votes)) if (t !== me.id) counts[t] = (counts[t] ?? 0) + 1;
@@ -156,10 +188,14 @@ export async function chooseVote(room: Room, rand = Math.random): Promise<{ targ
   try {
     const out = await completeJSON<{ vote: string; thought: string }>(
       [
-        { role: "system", content: systemPrompt(room, personaById(room.bot!.personaId)) },
+        { role: "system", content: systemPrompt(room, bot, personaById(bot.personaId)) },
         {
           role: "user",
-          content: `Chat so far:\n${transcriptFor(room)}\n\nVoting time. You must vote out one of: ${options.map((o) => o.alias).join(", ")}. Pick the one most suspicious of YOU, or whoever the group already suspects, so you blend in. Respond with JSON only: {"vote": "<exact alias>", "thought": "<under 15 words, why>"}`,
+          content: `Chat so far:\n${transcriptFor(room, bot)}\n\nVoting time. You must vote out one of: ${options.map((o) => o.alias).join(", ")}. ${
+            isReverse(room)
+              ? "Pick the player who sounds most like a real human."
+              : "Pick the one most suspicious of YOU, or whoever the group already suspects, so you blend in."
+          } Respond with JSON only: {"vote": "<exact alias>", "thought": "<under 15 words, why>"}`,
         },
       ],
       { temperature: 0.6, maxTokens: 80 },

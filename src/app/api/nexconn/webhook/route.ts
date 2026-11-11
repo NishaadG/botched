@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       const text = textOf(msg.content).trim();
       if (!text) return;
       await mutate(code, (room, now) =>
-        msg.userId === room.bot?.id ? [] : addMessage(room, { id: msg.messageId, from: msg.userId, text, at: now }, now),
+        room.bots.some((b) => b.id === msg.userId) ? [] : addMessage(room, { id: msg.messageId, from: msg.userId, text, at: now }, now),
       ).catch(() => {});
     });
   }

@@ -19,9 +19,9 @@ export function VoteSheet({ view, meId, onVote }: { view: RoomView; meId: string
     >
       <div className="mb-4 flex items-end justify-between">
         <div>
-          <p className="font-display text-2xl font-extrabold">Who is the bot?</p>
+          <p className="font-display text-2xl font-extrabold">{view.mode === "reverse" ? "Who is the human?" : "Who is the bot?"}</p>
           <p className="text-sm text-muted">
-            {view.youVotedFor ? "Vote locked in. You can still change it." : "Tap a player to vote them out."}
+            {view.youVotedFor ? "Vote locked in. You can still change it." : view.mode === "reverse" ? "Vote like an AI would. Pick someone who seems human." : "Tap a player to vote them out."}
           </p>
         </div>
         <span className="font-mono text-sm text-muted">

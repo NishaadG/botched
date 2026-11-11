@@ -48,8 +48,15 @@ export interface BotState {
   thinkingSince: number | null;
 }
 
+/**
+ * classic: humans hunt one hidden bot ("Who's the Bot").
+ * reverse: one human hides among AIs that are hunting them ("Who's the Human", playable solo).
+ */
+export type Mode = "classic" | "reverse";
+
 export interface Room {
   code: string;
+  mode: Mode;
   channelId: string;
   game: "whos-the-bot";
   hostId: string;
@@ -65,7 +72,7 @@ export interface Room {
   votes: Record<string, string>;
   eliminations: Elimination[];
   winner: "humans" | "bot" | null;
-  bot: BotState | null;
+  bots: BotState[];
   transcript: ChatLine[];
   seen: string[];
   settings: { chatSeconds: number; voteSeconds: number; revealSeconds: number };
@@ -77,11 +84,14 @@ export interface Room {
 export type Effect =
   | { type: "gm"; text: string }
   | { type: "event"; event: Record<string, unknown> }
-  | { type: "botSay"; text: string }
-  | { type: "botTyping" }
-  | { type: "planBot"; trigger: "prompt" | "reply" | "nudge" }
+  | { type: "botSay"; botId: string; text: string }
+  | { type: "botTyping"; botId: string }
+  /** Without botId, every bot still in the game decides whether to speak. */
+  | { type: "planBot"; trigger: "prompt" | "reply" | "nudge"; botId?: string }
   | { type: "botVote" }
   | { type: "gameOver" };
 
-export const MIN_HUMANS = 2;
-export const MAX_HUMANS = 8;
+export const MIN_HUMANS: Record<Mode, number> = { classic: 2, reverse: 1 };
+export const MAX_HUMANS: Record<Mode, number> = { classic: 8, reverse: 1 };
+/** How many AIs join a game of each mode. */
+export const BOT_COUNT: Record<Mode, number> = { classic: 1, reverse: 3 };

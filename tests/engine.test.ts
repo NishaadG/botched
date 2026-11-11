@@ -11,16 +11,16 @@ const seq = (...xs: number[]) => {
 function setup(humans = 3) {
   const room = createRoom("ABCDE", { id: "h0", name: "Asha" }, T0);
   for (let i = 1; i < humans; i++) join(room, { id: `h${i}`, name: `P${i}` }, T0);
-  start(room, "h0", { id: "bot1", personaId: "chill" }, T0, seq(0.3, 0.7, 0.1));
+  start(room, "h0", [{ id: "bot1", personaId: "chill" }], T0, seq(0.3, 0.7, 0.1));
   return room;
 }
 
 test("only the host can start, and only with enough players", () => {
   const room = createRoom("ABCDE", { id: "h0", name: "Asha" }, T0);
-  assert.throws(() => start(room, "h0", { id: "b", personaId: "chill" }, T0), /at least 2/);
+  assert.throws(() => start(room, "h0", [{ id: "b", personaId: "chill" }], T0), /at least 2/);
   join(room, { id: "h1", name: "Kabir" }, T0);
-  assert.throws(() => start(room, "h1", { id: "b", personaId: "chill" }, T0), /host/);
-  start(room, "h0", { id: "b", personaId: "chill" }, T0);
+  assert.throws(() => start(room, "h1", [{ id: "b", personaId: "chill" }], T0), /host/);
+  start(room, "h0", [{ id: "b", personaId: "chill" }], T0);
   assert.equal(room.phase, "chat");
   assert.equal(room.players.length, 3);
 });
@@ -96,17 +96,17 @@ test("you cannot vote for yourself or for someone already out", () => {
 
 test("the bot's planned message is delivered only after its typing delay", () => {
   const room = setup(3);
-  room.bot!.plan = { text: "lol same", typingAt: T0 + 2000, dueAt: T0 + 5000, typingSent: false, reason: "reply" };
+  room.bots[0].plan = { text: "lol same", typingAt: T0 + 2000, dueAt: T0 + 5000, typingSent: false, reason: "reply" };
   assert.deepEqual(tick(room, T0 + 1000), []);
-  assert.deepEqual(tick(room, T0 + 2500), [{ type: "botTyping" }]);
-  assert.deepEqual(tick(room, T0 + 5100), [{ type: "botSay", text: "lol same" }]);
-  assert.equal(room.bot!.plan, null);
+  assert.deepEqual(tick(room, T0 + 2500), [{ type: "botTyping", botId: "bot1" }]);
+  assert.deepEqual(tick(room, T0 + 5100), [{ type: "botSay", botId: "bot1", text: "lol same" }]);
+  assert.equal(room.bots[0].plan, null);
 });
 
 test("ticks are only due when a timer ran out or the bot has something to deliver", () => {
   const room = setup(3);
   assert.equal(tickDue(room, T0 + 1000), false);
-  room.bot!.plan = { text: "hm", typingAt: T0 + 2000, dueAt: T0 + 5000, typingSent: false, reason: "reply" };
+  room.bots[0].plan = { text: "hm", typingAt: T0 + 2000, dueAt: T0 + 5000, typingSent: false, reason: "reply" };
   assert.equal(tickDue(room, T0 + 1500), false);
   assert.equal(tickDue(room, T0 + 2500), true);
   tick(room, T0 + 2500);

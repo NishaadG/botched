@@ -1,5 +1,5 @@
 import { ALIASES, PROMPTS, shuffle } from "./content";
-import { MAX_HUMANS, MIN_HUMANS, type ChatLine, type Effect, type Player, type Room } from "./types";
+import { MAX_HUMANS, MIN_HUMANS, type BotState, type ChatLine, type Effect, type Mode, type Player, type Room } from "./types";
 
 /**
  * Pure game rules for "Who's the Bot". No I/O: every function mutates the room
@@ -8,9 +8,10 @@ import { MAX_HUMANS, MIN_HUMANS, type ChatLine, type Effect, type Player, type R
 
 export class GameError extends Error {}
 
-export function createRoom(code: string, host: { id: string; name: string }, now: number): Room {
+export function createRoom(code: string, host: { id: string; name: string }, now: number, mode: Mode = "classic"): Room {
   return {
     code,
+    mode,
     channelId: `wtb_${code}`,
     game: "whos-the-bot",
     hostId: host.id,
@@ -26,7 +27,7 @@ export function createRoom(code: string, host: { id: string; name: string }, now
     votes: {},
     eliminations: [],
     winner: null,
-    bot: null,
+    bots: [],
     transcript: [],
     seen: [],
     settings: { chatSeconds: 90, voteSeconds: 30, revealSeconds: 7 },
@@ -41,11 +42,15 @@ function makePlayer(id: string, name: string, now: number, isBot = false): Playe
 export const humans = (room: Room) => room.players.filter((p) => !p.isBot);
 export const alive = (room: Room) => room.players.filter((p) => p.alive);
 export const playerById = (room: Room, id: string) => room.players.find((p) => p.id === id);
+export const botById = (room: Room, id: string) => room.bots.find((b) => b.id === id);
+export const isReverse = (room: Room) => room.mode === "reverse";
 
 export function join(room: Room, user: { id: string; name: string }, now: number): Effect[] {
   if (playerById(room, user.id)) return [];
   if (room.phase !== "lobby") throw new GameError("This game has already started.");
-  if (humans(room).length >= MAX_HUMANS) throw new GameError("This room is full.");
+  if (humans(room).length >= MAX_HUMANS[room.mode ?? "classic"]) {
+    throw new GameError(isReverse(room) ? "This is a solo game. Start your own!" : "This room is full.");
+  }
   room.players.push(makePlayer(user.id, user.name, now));
   room.version++;
   return [{ type: "event", event: { kind: "lobby" } }];
@@ -62,32 +67,35 @@ export function leave(room: Room, userId: string): Effect[] {
 export function start(
   room: Room,
   by: string,
-  bot: { id: string; personaId: string },
+  bots: { id: string; personaId: string }[],
   now: number,
   rand: () => number = Math.random,
 ): Effect[] {
   if (room.phase !== "lobby") throw new GameError("The game has already started.");
   if (by !== room.hostId) throw new GameError("Only the host can start the game.");
-  if (humans(room).length < MIN_HUMANS) throw new GameError(`You need at least ${MIN_HUMANS} people to play.`);
+  const min = MIN_HUMANS[room.mode];
+  if (humans(room).length < min) throw new GameError(`You need at least ${min} people to play.`);
 
-  room.players.push(makePlayer(bot.id, "The Bot", now, true));
+  for (const b of bots) room.players.push(makePlayer(b.id, "AI", now, true));
   const looks = shuffle(ALIASES, rand);
   shuffle(room.players, rand).forEach((p, i) => Object.assign(p, looks[i]));
-  room.bot = {
-    id: bot.id,
-    personaId: bot.personaId,
-    thoughts: [],
-    plan: null,
-    lastSpokeAt: 0,
-    linesThisRound: 0,
-    thinkingSince: null,
-  };
-  room.maxRounds = Math.min(5, Math.max(2, humans(room).length));
+  room.bots = bots.map(
+    (b): BotState => ({
+      id: b.id,
+      personaId: b.personaId,
+      thoughts: [],
+      plan: null,
+      lastSpokeAt: 0,
+      linesThisRound: 0,
+      thinkingSince: null,
+    }),
+  );
+  room.maxRounds = isReverse(room) ? 3 : Math.min(5, Math.max(2, humans(room).length));
   room.startedAt = now;
-  return [
-    { type: "gm", text: `Welcome. ${humans(room).length} humans, 1 bot. Everyone has a secret alias. Find the bot before it outlasts you.` },
-    ...startRound(room, now, rand),
-  ];
+  const welcome = isReverse(room)
+    ? `Welcome. Everyone in this chat is an AI except one human. AIs: find the human. Human: act like a bot and survive ${room.maxRounds} rounds.`
+    : `Welcome. ${humans(room).length} humans, 1 bot. Everyone has a secret alias. Find the bot before it outlasts you.`;
+  return [{ type: "gm", text: welcome }, ...startRound(room, now, rand)];
 }
 
 function startRound(room: Room, now: number, rand: () => number): Effect[] {
@@ -98,7 +106,7 @@ function startRound(room: Room, now: number, rand: () => number): Effect[] {
   const pool = PROMPTS.filter((p) => !room.usedPrompts.includes(p));
   room.prompt = (pool.length ? pool : PROMPTS)[Math.floor(rand() * (pool.length || PROMPTS.length))];
   room.usedPrompts.push(room.prompt);
-  if (room.bot) room.bot.linesThisRound = 0;
+  for (const b of room.bots) b.linesThisRound = 0;
   room.version++;
   return [
     { type: "gm", text: `Round ${room.round}. ${room.prompt}` },
@@ -152,7 +160,11 @@ function resolveVote(room: Room, now: number): Effect[] {
 
   let text: string;
   if (!out) text = "It's a tie. Nobody is voted out this round.";
-  else if (out.isBot) text = `${out.alias} was voted out... and it WAS the bot. Humans win! 🎉`;
+  else if (isReverse(room)) {
+    text = out.isBot
+      ? `${out.alias} was voted out. Just another AI. 🤖 The human is still hiding.`
+      : `${out.alias} was voted out... and they were the HUMAN. The AIs win. 🤖`;
+  } else if (out.isBot) text = `${out.alias} was voted out... and it WAS the bot. Humans win! 🎉`;
   else text = `${out.alias} was voted out. They were human. 😬 The bot is still among you.`;
   return [
     { type: "gm", text },
@@ -167,8 +179,12 @@ function finish(room: Room, winner: "humans" | "bot", now: number): Effect[] {
   room.version++;
   void now;
   const bot = room.players.find((p) => p.isBot);
-  const text =
-    winner === "humans"
+  const human = room.players.find((p) => !p.isBot);
+  const text = isReverse(room)
+    ? winner === "humans"
+      ? `Game over. The human survived. It was ${human?.alias} all along. 🧠`
+      : "Game over. The AIs found the human."
+    : winner === "humans"
       ? "Game over. The humans caught the bot."
       : `Game over. The bot survived. It was ${bot?.alias} all along. 🤖`;
   return [
@@ -181,35 +197,41 @@ function finish(room: Room, winner: "humans" | "bot", now: number): Effect[] {
 /** Advances timers. Safe to call often; does nothing until a deadline passes. */
 /** Cheap check so clock ticks only lock and write the room when something is actually due. */
 export function tickDue(room: Room, now: number) {
-  const plan = room.phase === "chat" ? room.bot?.plan : null;
-  if (plan && (now >= plan.dueAt || (!plan.typingSent && now >= plan.typingAt))) return true;
+  if (room.phase === "chat") {
+    for (const b of room.bots) {
+      const plan = b.plan;
+      if (plan && (now >= plan.dueAt || (!plan.typingSent && now >= plan.typingAt))) return true;
+    }
+  }
   return Boolean(room.phaseEndsAt && now >= room.phaseEndsAt && room.phase !== "lobby" && room.phase !== "over");
 }
 
 export function tick(room: Room, now: number, rand: () => number = Math.random): Effect[] {
   const effects: Effect[] = [];
-  const bot = room.bot;
 
-  if (room.phase === "chat" && bot?.plan) {
-    if (!bot.plan.typingSent && now >= bot.plan.typingAt) {
-      bot.plan.typingSent = true;
-      effects.push({ type: "botTyping" });
-    }
-    if (now >= bot.plan.dueAt) {
-      effects.push({ type: "botSay", text: bot.plan.text });
-      bot.plan = null;
+  if (room.phase === "chat") {
+    for (const bot of room.bots) {
+      if (!bot.plan || !playerById(room, bot.id)?.alive) continue;
+      if (!bot.plan.typingSent && now >= bot.plan.typingAt) {
+        bot.plan.typingSent = true;
+        effects.push({ type: "botTyping", botId: bot.id });
+      }
+      if (now >= bot.plan.dueAt) {
+        effects.push({ type: "botSay", botId: bot.id, text: bot.plan.text });
+        bot.plan = null;
+      }
     }
   }
 
   if (!room.phaseEndsAt || now < room.phaseEndsAt) return effects;
 
   if (room.phase === "chat") {
-    if (bot) bot.plan = null;
+    for (const b of room.bots) b.plan = null;
     room.phase = "vote";
     room.phaseEndsAt = now + room.settings.voteSeconds * 1000;
     room.version++;
     effects.push(
-      { type: "gm", text: "Time's up. Vote: who is the bot?" },
+      { type: "gm", text: isReverse(room) ? "Time's up. Vote: who is the human?" : "Time's up. Vote: who is the bot?" },
       { type: "event", event: { kind: "phase", phase: "vote", round: room.round } },
       { type: "botVote" },
     );
@@ -217,10 +239,19 @@ export function tick(room: Room, now: number, rand: () => number = Math.random):
     effects.push(...resolveVote(room, now));
   } else if (room.phase === "reveal") {
     const last = room.eliminations.at(-1);
-    const botAlive = room.players.some((p) => p.isBot && p.alive);
-    if (last?.wasBot || !botAlive) effects.push(...finish(room, "humans", now));
-    else if (alive(room).length <= 2 || room.round >= room.maxRounds) effects.push(...finish(room, "bot", now));
-    else effects.push(...startRound(room, now, rand));
+    if (isReverse(room)) {
+      // The AIs win by voting out the human; the human wins by lasting every round
+      // (or when only one AI is left, which can never outvote them).
+      const humanAlive = room.players.some((p) => !p.isBot && p.alive);
+      if (!humanAlive) effects.push(...finish(room, "bot", now));
+      else if (alive(room).length <= 2 || room.round >= room.maxRounds) effects.push(...finish(room, "humans", now));
+      else effects.push(...startRound(room, now, rand));
+    } else {
+      const botAlive = room.players.some((p) => p.isBot && p.alive);
+      if (last?.wasBot || !botAlive) effects.push(...finish(room, "humans", now));
+      else if (alive(room).length <= 2 || room.round >= room.maxRounds) effects.push(...finish(room, "bot", now));
+      else effects.push(...startRound(room, now, rand));
+    }
   }
   return effects;
 }
@@ -232,6 +263,7 @@ export function viewFor(room: Room, viewerId: string | null) {
   const showAliases = room.phase !== "lobby";
   return {
     code: room.code,
+    mode: room.mode ?? "classic",
     channelId: room.channelId,
     phase: room.phase,
     round: room.round,
@@ -263,8 +295,12 @@ export function viewFor(room: Room, viewerId: string | null) {
       tally: room.phase === "reveal" || over || e !== room.eliminations.at(-1) ? e.tally : {},
     })),
     transcript: room.transcript,
-    botThoughts: over ? room.bot?.thoughts ?? [] : [],
-    botPersona: over && room.bot ? room.bot.personaId : null,
+    botThoughts: over
+      ? room.bots
+          .flatMap((b) => b.thoughts.map((t) => ({ ...t, alias: playerById(room, b.id)?.alias ?? "" })))
+          .sort((a, b) => a.at - b.at)
+      : [],
+    botPersona: over && room.bots[0] ? room.bots[0].personaId : null,
     finalVotes: over ? room.votes : null,
   };
 }

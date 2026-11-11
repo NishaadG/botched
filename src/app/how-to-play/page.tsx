@@ -35,6 +35,13 @@ const RULES = [
   },
 ];
 
+const SOLO = [
+  "Nobody around? Pick “Play solo vs 3 AIs” on the game page.",
+  "It's the game turned around: you're the only human, and three AIs know it. They're hunting you.",
+  "Answer like a language model: calm, tidy, slightly formal. Typos, slang and feelings give you away.",
+  "The AIs vote out whoever seems most human. Survive 3 rounds to win.",
+];
+
 const TIPS = [
   ["Ask oddly specific questions", "“What's the name of the chai place near your college?” is harder to fake than “how was your day”."],
   ["Watch the timing", "The bot types at a human pace, but it never gets distracted. Notice who always replies."],
@@ -82,6 +89,21 @@ export default function HowToPlay() {
               </ul>
             </div>
           ))}
+        </section>
+
+        <section className="card p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Solo mode</p>
+          <h2 className="mt-2 font-display text-3xl font-extrabold">Who&apos;s the Human</h2>
+          <ul className="mt-4 space-y-2 text-muted">
+            {SOLO.map((p) => (
+              <li key={p} className="flex gap-2">
+                <span className="text-brand" aria-hidden>
+                  ›
+                </span>
+                {p}
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section>

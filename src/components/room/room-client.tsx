@@ -288,9 +288,15 @@ function SharedResult({ view }: { view: RoomView }) {
     <Centered>
       <p className="font-mono text-sm uppercase tracking-[0.3em] text-muted">Room {view.code} · game over</p>
       <h1 className={`font-display text-5xl font-black leading-none md:text-6xl ${won ? "text-brand" : "text-hot"}`}>
-        {won ? `${humans} humans caught the bot.` : `The bot fooled ${humans} humans.`}
+        {view.mode === "reverse"
+          ? won
+            ? "A human fooled 3 AIs."
+            : "3 AIs found the human."
+          : won
+            ? `${humans} humans caught the bot.`
+            : `The bot fooled ${humans} humans.`}
       </h1>
-      {bot && (
+      {bot && view.mode !== "reverse" && (
         <p className="text-lg text-muted">
           It was hiding as{" "}
           <b style={{ color: bot.color }}>

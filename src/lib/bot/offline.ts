@@ -88,6 +88,8 @@ const THOUGHTS = {
 };
 
 export interface OfflineContext {
+  /** classic: blend in as a human. reverse: an AI hunting the one human. */
+  mode?: "classic" | "reverse";
   promptIndex: number;
   trigger: "prompt" | "reply" | "nudge";
   myAlias: string;
@@ -111,6 +113,8 @@ export function offlineLine(ctx: OfflineContext, rand: Rand = Math.random): { sa
     line
       .replace("{other}", first(pick(others.length ? others : ["someone"], rand)))
       .replace("{name}", ctx.last ? first(ctx.last.alias) : "");
+
+  if (ctx.mode === "reverse") return reverseLine(ctx, fresh, fill, rand);
 
   if (ctx.trigger === "prompt") {
     const pool = ANSWERS[ctx.promptIndex] ?? ANSWERS[0];
@@ -147,3 +151,90 @@ export const VOTE_THOUGHTS = [
   "Picked whoever was already in trouble. Teamwork.",
   "Never vote for the person accusing you. Too obvious.",
 ];
+
+/* ---------- Reverse mode: the AIs hunting the human ---------- */
+
+const ROBOT_ANSWER_FRAMES = [
+  "Based on aggregated human data, the typical answer is: {answer}.",
+  "Processing. My optimal response would be: {answer}.",
+  "As a language model I lack personal experience. Statistically: {answer}.",
+  "Query received. Most probable human answer: {answer}.",
+];
+
+const ROBOT_ACCUSATIONS = [
+  "{name}, your message contained slang and no capital letters. That is statistically human.",
+  "{name} reacted with emotion. Flagging for review.",
+  "{name}, please restate that with correct punctuation.",
+  "I detect sarcasm from {name}. Language models rarely do that unprompted.",
+  "{name} took longer than average to reply. Possible human latency.",
+];
+
+const ROBOT_DEFENSES = [
+  "Negative. My responses are generated in under 200 milliseconds.",
+  "I am a large language model. Accusing me is inefficient.",
+  "Error: I do not possess a childhood. Please check {other} instead.",
+  "My grammar is consistent. {other} has made two typos so far.",
+];
+
+const ROBOT_ACKS = [
+  "Acknowledged, {name}. That response is consistent with a language model.",
+  "Noted. {name}'s answer has a high probability of being AI-generated.",
+  "Interesting input, {name}. Updating my analysis.",
+  "Logging {name}'s message for pattern analysis.",
+];
+
+const ROBOT_THOUGHTS = {
+  prompt: ["Answered like a model. Formal, bland, safe.", "Added a fake statistic. Very on brand.", "Disclaimer included. Humans never add disclaimers."],
+  hunt: ["Typos and slang are human tells. Called it out.", "Pressure the messy typist. Humans crack under pressure.", "That reply had feelings in it. Suspicious."],
+  defend: ["Accused of being human. Responded with pure logic.", "Deflected to whoever made typos."],
+};
+
+const SLANG = /\b(lol|lmao|bro|yaar|ngl|fr|haha+|omg|bruh|tbh|idk|wtf|dude|yo|nah|ya|ok+)\b/i;
+
+/** How human a player's messages look: slang, lowercase starts, emoji, missing punctuation, very short replies. */
+export function humanScore(lines: string[]) {
+  let score = 0;
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (!t) continue;
+    if (SLANG.test(t)) score += 2;
+    if (/^[a-z]/.test(t)) score += 1;
+    if (/\p{Extended_Pictographic}/u.test(t)) score += 1;
+    if (!/[.!?]$/.test(t)) score += 0.5;
+    if (t.split(/\s+/).length <= 3) score += 0.5;
+    if (/(.)\1{2,}/.test(t)) score += 1; // "sooo", "hahaha"
+  }
+  return lines.length ? score / Math.sqrt(lines.length) : 0;
+}
+
+export const REVERSE_VOTE_THOUGHTS = [
+  "Messiest typing in the room. Humans can't help it.",
+  "Most slang per message. Classic human behaviour.",
+  "Their replies had feelings in them.",
+  "Too casual. Models don't say 'lol'.",
+  "No evidence either way, so I picked the quietest one.",
+  "Their punctuation was suspiciously inconsistent.",
+];
+
+function reverseLine(
+  ctx: OfflineContext,
+  fresh: (pool: readonly string[]) => string,
+  fill: (line: string) => string,
+  rand: Rand,
+): { say: string; thought: string } {
+  const me = first(ctx.myAlias);
+  const text = ctx.last?.text ?? "";
+  if (ctx.trigger === "prompt" || !ctx.last) {
+    const pool = ANSWERS[ctx.promptIndex] ?? ANSWERS[0];
+    const unusedAnswers = pool.filter((a) => !ctx.said.some((s) => s.includes(a)));
+    const answer = pick(unusedAnswers.length ? unusedAnswers : pool, rand);
+    return { say: fresh(ROBOT_ANSWER_FRAMES).replace("{answer}", answer), thought: pick(ROBOT_THOUGHTS.prompt, rand) };
+  }
+  if (text.toLowerCase().includes(me) && /\b(human|person|real|typo)\b/i.test(text)) {
+    return { say: fill(fresh(ROBOT_DEFENSES)), thought: pick(ROBOT_THOUGHTS.defend, rand) };
+  }
+  if (humanScore([text]) >= 2 || rand() < 0.35) {
+    return { say: fill(fresh(ROBOT_ACCUSATIONS)), thought: pick(ROBOT_THOUGHTS.hunt, rand) };
+  }
+  return { say: fill(fresh(ROBOT_ACKS)), thought: pick(ROBOT_THOUGHTS.hunt, rand) };
+}

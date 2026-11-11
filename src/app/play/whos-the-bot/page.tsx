@@ -13,11 +13,11 @@ export default function WhosTheBotStart() {
   const [error, setError] = useState("");
   const [renaming, setRenaming] = useState(false);
 
-  const create = async () => {
+  const create = async (mode: "classic" | "reverse" = "classic") => {
     setBusy(true);
     setError("");
     try {
-      const res = await fetch("/api/rooms", { method: "POST" });
+      const res = await fetch(mode === "reverse" ? "/api/rooms?mode=reverse" : "/api/rooms", { method: "POST" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error);
       router.push(`/r/${j.code}`);
@@ -69,7 +69,7 @@ export default function WhosTheBotStart() {
                   change
                 </button>
               </p>
-              <button className="btn btn-brand py-4 text-lg" onClick={create} disabled={busy}>
+              <button className="btn btn-brand py-4 text-lg" onClick={() => create()} disabled={busy}>
                 {busy ? "Opening a room…" : "Create a room"}
               </button>
               <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-muted">
@@ -95,6 +95,16 @@ export default function WhosTheBotStart() {
                 </button>
               </form>
               {error && <p className="text-sm text-hot">{error}</p>}
+              <div className="rounded-2xl border border-line bg-ink p-4">
+                <p className="text-sm font-semibold">Nobody around right now?</p>
+                <p className="mt-1 text-sm text-muted">
+                  Play <b className="text-text">Who&apos;s the Human</b> solo: you&apos;re the only human among three AIs that are hunting
+                  you. Pass as a bot for 3 rounds.
+                </p>
+                <button className="btn btn-ghost mt-3 w-full" onClick={() => create("reverse")} disabled={busy}>
+                  Play solo vs 3 AIs
+                </button>
+              </div>
             </div>
           )}
         </div>

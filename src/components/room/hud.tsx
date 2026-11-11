@@ -94,7 +94,9 @@ export function PlayersPanel({ view, meId }: { view: RoomView; meId: string }) {
         </ul>
       </div>
       <p className="mt-auto text-xs leading-relaxed text-muted">
-        Tip: ask oddly specific questions. The bot is good at sounding normal, but bad at being weird in the same way twice.
+        {view.mode === "reverse"
+          ? "Tip: the AIs hunt for typos, slang and feelings. Write like a calm, polite language model."
+          : "Tip: ask oddly specific questions. The bot is good at sounding normal, but bad at being weird in the same way twice."}
       </p>
     </aside>
   );

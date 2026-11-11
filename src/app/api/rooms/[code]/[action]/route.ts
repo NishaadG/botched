@@ -1,5 +1,5 @@
 import { addMessage, castVote, GameError, join, leave, start, tick, tickDue, viewFor } from "@/lib/game/engine";
-import { loadRoom, markSeen, mutate, newBot, onlineIn } from "@/lib/game/runner";
+import { loadRoom, markSeen, mutate, newBots, onlineIn } from "@/lib/game/runner";
 import { joinGroupChannel } from "@/lib/nexconn-server";
 import { getSession } from "@/lib/session";
 
@@ -27,11 +27,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/rooms/[code
         const online = current ? new Set(await onlineIn(current)) : new Set<string>();
         online.add(me.id);
         room = await mutate(code, (r, now) => {
-          if (r.phase !== "lobby") return start(r, me.id, newBot(), now);
+          if (r.phase !== "lobby") return start(r, me.id, newBots(r.mode ?? "classic"), now);
           // Drop players whose lobby tab is gone; if the host left, whoever presses start becomes host.
           r.players = r.players.filter((p) => online.has(p.id));
           if (!online.has(r.hostId)) r.hostId = me.id;
-          return start(r, me.id, newBot(), now);
+          return start(r, me.id, newBots(r.mode ?? "classic"), now);
         });
         break;
       }

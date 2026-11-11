@@ -18,6 +18,10 @@
 4. **Win.** Humans win the moment the bot is voted out. The bot wins if it survives every round, or if only one human is left beside it.
 5. **Reveal.** Real names, every vote, a replay of the chat and the bot's inner monologue. Share the result as a card.
 
+## Solo mode: Who's the Human
+
+Nobody around? The game flips: **you are the only human in a chat with three AIs, and they know it.** They answer like language models, call out typos, slang and feelings, and vote out whoever seems most human. Pass as a bot for three rounds to win. The AIs play fair: they never see who the human is, only what everyone typed.
+
 ## The bot
 
 The bot is built to blend in, not to be helpful:
@@ -86,6 +90,7 @@ npm test                 # game engine, moderation and webhook signature unit te
 npm run build && ALLOW_FAST_ROOMS=1 npm start -- -p 3210
 npm run e2e              # 3 browsers play a full game over Nexconn
 npm run e2e:lounge       # 2 browsers meet in the lounge and join a game from an invite
+npm run e2e:solo         # 1 player plays solo against three AIs
 ```
 
 The end-to-end scripts use your installed Chrome through Playwright.
