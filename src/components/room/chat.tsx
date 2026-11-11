@@ -32,15 +32,18 @@ export function MessageList({
   gmId,
   meId,
   showNames = false,
+  live = false,
 }: {
   messages: IncomingMessage[];
   players: Map<string, PlayerView>;
   gmId: string;
   meId: string;
   showNames?: boolean;
+  /** Announce new messages to screen readers (the live game chat, not the replay). */
+  live?: boolean;
 }) {
   return (
-    <ul className="flex flex-col gap-2.5">
+    <ul className="flex flex-col gap-2.5" aria-live={live ? "polite" : undefined} aria-relevant="additions">
       <AnimatePresence initial={false}>
         {messages.map((m) => {
           if (m.from === gmId) {
@@ -141,7 +144,7 @@ export function ChatPanel({
   return (
     <>
       <div ref={scroller} className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4 md:px-5">
-        <MessageList messages={messages} players={players} gmId={gmId} meId={meId} />
+        <MessageList messages={messages} players={players} gmId={gmId} meId={meId} live />
       </div>
       <div className="h-6 px-5 text-xs text-muted">
         {typers.length > 0 && (
