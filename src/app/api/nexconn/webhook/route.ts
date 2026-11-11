@@ -4,6 +4,7 @@ import { addMessage } from "@/lib/game/engine";
 import { allowGameMessage, codeFromChannel } from "@/lib/game/moderation";
 import { loadRoom, mutate } from "@/lib/game/runner";
 import { verifyWebhookSignature } from "@/lib/nexconn-server";
+import { hasProfanity, maskProfanity } from "@/lib/profanity";
 import { kv } from "@/lib/store";
 
 interface MessageEvent {
@@ -52,6 +53,20 @@ export async function POST(request: Request) {
     if (!msg || !code) return Response.json({ pass: 1 });
     const room = await loadRoom(code);
     return Response.json(allowGameMessage(room, msg.userId) ? { pass: 1 } : { pass: 0, extra: "chat-closed" });
+  }
+
+  // The public lounge: mask swears before Nexconn delivers the message to everyone.
+  if (event.type === "open_channel:pre_messaging") {
+    if (!msg || msg.messageType !== "RC:TxtMsg") return Response.json({ pass: 1 });
+    try {
+      const content = JSON.parse(msg.content) as { content?: string };
+      if (typeof content.content === "string" && hasProfanity(content.content)) {
+        return Response.json({ pass: 1, replaceContent: JSON.stringify({ ...content, content: maskProfanity(content.content) }) });
+      }
+    } catch {
+      // Not JSON: deliver unchanged.
+    }
+    return Response.json({ pass: 1 });
   }
 
   if (event.type === "message:send" && msg && msg.messageType === "RC:TxtMsg") {

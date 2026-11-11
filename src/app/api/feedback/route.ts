@@ -1,6 +1,7 @@
 import { loadRoom } from "@/lib/game/runner";
 import { getSession } from "@/lib/session";
 import type { Feedback } from "@/lib/stats";
+import { maskProfanity } from "@/lib/profanity";
 import { kv } from "@/lib/store";
 
 /** One rating (and optional comment) per player per finished game. */
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
   if (!(await kv.lock(`feedback:${code}:${session.uid}`, 7 * 86_400_000))) {
     return Response.json({ error: "Thanks, we already have your rating." }, { status: 409 });
   }
-  const text = String(body.text ?? "")
+  const text = maskProfanity(String(body.text ?? ""))
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 280);
