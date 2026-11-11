@@ -302,6 +302,7 @@ export function viewFor(room: Room, viewerId: string | null) {
       : [],
     botPersona: over && room.bots[0] ? room.bots[0].personaId : null,
     finalVotes: over ? room.votes : null,
+    rematch: room.rematch ?? null,
   };
 }
 

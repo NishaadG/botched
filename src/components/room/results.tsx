@@ -33,12 +33,14 @@ export function Results({
   const meId = view.you?.id ?? "";
   const botLines = messages.filter((m) => m.from === bot?.id).length;
 
+  // Everyone who presses "Play again" lands in the same new room, so the group stays together.
   const rematch = async () => {
+    if (view.rematch) return router.push(`/r/${view.rematch}`);
     setBusy(true);
-    const res = await fetch(solo ? "/api/rooms?mode=reverse" : "/api/rooms", { method: "POST" });
-    const j = await res.json();
+    const res = await fetch(`/api/rooms/${view.code}/rematch`, { method: "POST" });
+    const j = await res.json().catch(() => ({}));
     if (res.ok) router.push(`/r/${j.code}`);
-    setBusy(false);
+    else setBusy(false);
   };
 
   const share = async () => {
@@ -83,8 +85,12 @@ export function Results({
             </div>
           )}
           <div className="mt-6 flex flex-wrap gap-2">
-            <button className="btn btn-brand" onClick={rematch} disabled={busy}>
-              {busy ? "Creating…" : "Play again"}
+            <button
+              className={`btn btn-brand ${view.rematch ? "animate-pulse" : ""}`}
+              onClick={rematch}
+              disabled={busy}
+            >
+              {busy ? "Creating…" : view.rematch ? "Join the rematch →" : "Play again"}
             </button>
             <button className="btn btn-ghost" onClick={share}>
               {shared ? "Copied ✓" : "Share result"}

@@ -78,6 +78,8 @@ export interface Room {
   settings: { chatSeconds: number; voteSeconds: number; revealSeconds: number };
   version: number;
   statsRecorded?: boolean;
+  /** Code of the follow-up room, once someone starts a rematch. */
+  rematch?: string;
 }
 
 /** Side-effects the engine asks the runner to perform. */

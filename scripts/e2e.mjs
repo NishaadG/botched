@@ -96,6 +96,17 @@ await host.page.fill('input[aria-label="Comment"]', "the bot's typos were way to
 await host.page.click("text=Send");
 await host.page.waitForSelector("text=Thanks!", { timeout: 10000 });
 console.log("feedback sent");
+// Rematch: one player starts it, the others see a join button and land in the same new room.
+await guests[0].page.waitForSelector("text=Game over", { timeout: 30000 });
+await guests[0].page.click("text=Play again");
+await guests[0].page.waitForURL((u) => !u.pathname.endsWith(code), { timeout: 20000 });
+const next = guests[0].page.url().split("/").pop();
+await host.page.goto(`${BASE}/r/${code}`);
+await host.page.waitForSelector("text=Join the rematch", { timeout: 20000 });
+await host.page.click("text=Join the rematch");
+await host.page.waitForURL(`**/r/${next}`, { timeout: 20000 });
+await host.page.waitForFunction(() => document.body.innerText.includes("In the room (2/8)"), null, { timeout: 20000 });
+console.log("rematch: both players in", next);
 await host.page.goto(`${BASE}/stats`);
 await host.page.waitForSelector("text=the bot's typos were way too convincing", { timeout: 10000 });
 await host.page.screenshot({ path: `${OUT}/6-stats.png`, fullPage: true });
