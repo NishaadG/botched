@@ -1,0 +1,26 @@
+import { createRoom } from "@/lib/game/engine";
+import { loadRoom, newRoomCode, saveRoom } from "@/lib/game/runner";
+import { createGroupChannel } from "@/lib/nexconn-server";
+import { getSession } from "@/lib/session";
+
+export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session) return Response.json({ error: "Choose a nickname first." }, { status: 401 });
+
+  let code = newRoomCode();
+  for (let i = 0; i < 5 && (await loadRoom(code)); i++) code = newRoomCode();
+
+  const room = createRoom(code, { id: session.uid, name: session.name }, Date.now());
+  // Development only: short timers for automated end-to-end tests.
+  if (process.env.NODE_ENV !== "production" && new URL(request.url).searchParams.get("fast") === "1") {
+    room.settings = { chatSeconds: 25, voteSeconds: 15, revealSeconds: 4 };
+  }
+  try {
+    await createGroupChannel(room.channelId, session.uid, `Who's the Bot · ${code}`, [session.uid]);
+  } catch (err) {
+    console.error("[rooms] group create failed", err);
+    return Response.json({ error: "Could not open a chat room. Try again." }, { status: 502 });
+  }
+  await saveRoom(room);
+  return Response.json({ code });
+}

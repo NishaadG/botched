@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+
+  --color-ink: #0b0a14;
+  --color-panel: #15132a;
+  --color-panel-2: #1d1a38;
+  --color-line: #2c2852;
+  --color-muted: #9a96c4;
+  --color-text: #f3f1ff;
+  --color-brand: #a3ff5c;
+  --color-brand-ink: #0f1a06;
+  --color-hot: #ff4d8d;
+  --color-cool: #5cc8ff;
+  --color-warn: #ffc94d;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.bg-grid {
+  background-image:
+    radial-gradient(circle at 20% -10%, rgb(163 255 92 / 0.14), transparent 40%),
+    radial-gradient(circle at 90% 10%, rgb(255 77 141 / 0.14), transparent 40%),
+    linear-gradient(rgb(255 255 255 / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.03) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px;
+}
+
+.card {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.01)), var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.8rem 1.4rem;
+  font-weight: 700;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    opacity 0.2s;
+}
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+.btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.btn-brand {
+  background: var(--color-brand);
+  color: var(--color-brand-ink);
+  box-shadow:
+    0 0 0 1px rgb(163 255 92 / 0.4),
+    0 10px 30px -10px rgb(163 255 92 / 0.6);
+}
+.btn-brand:hover {
+  box-shadow:
+    0 0 0 1px rgb(163 255 92 / 0.7),
+    0 14px 40px -10px rgb(163 255 92 / 0.8);
+}
+.btn-ghost {
+  background: rgb(255 255 255 / 0.05);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+}
+.btn-ghost:hover {
+  background: rgb(255 255 255 / 0.09);
+}
+
+.input {
+  width: 100%;
+  background: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+  color: var(--color-text);
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.input:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgb(163 255 92 / 0.18);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+@keyframes blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+.typing-dot {
+  animation: blink 1.2s infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes glitch {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  60% {
+    transform: translate(-1px, -1px);
+  }
+}
+.glitch:hover {
+  animation: glitch 0.3s linear 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
