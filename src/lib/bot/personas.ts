@@ -8,7 +8,6 @@ export interface Persona {
   /** Characters per second while "typing". */
   typingSpeed: number;
   chattiness: number;
-  fallback: string[];
 }
 
 export const PERSONAS: Persona[] = [
@@ -21,7 +20,6 @@ export const PERSONAS: Persona[] = [
     typoRate: 0.18,
     typingSpeed: 6,
     chattiness: 0.45,
-    fallback: ["lol same", "bro what 😭", "wait who said that", "honestly no idea yaar", "this is so sus", "haha fair"],
   },
   {
     id: "chill",
@@ -32,7 +30,6 @@ export const PERSONAS: Persona[] = [
     typoRate: 0.12,
     typingSpeed: 7,
     chattiness: 0.35,
-    fallback: ["ngl thats fair", "lmao", "fr", "idk man", "nah thats crazy", "who even says that"],
   },
   {
     id: "keen",
@@ -43,7 +40,6 @@ export const PERSONAS: Persona[] = [
     typoRate: 0.08,
     typingSpeed: 5,
     chattiness: 0.55,
-    fallback: ["Wait that's actually so relatable", "Okay but why does that sound like me 😂", "Hmm I don't trust that answer", "Same here honestly!"],
   },
 ];
 

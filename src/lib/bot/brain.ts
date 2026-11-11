@@ -2,6 +2,7 @@ import "server-only";
 import { alive, playerById } from "../game/engine";
 import type { Room } from "../game/types";
 import { completeJSON } from "./llm";
+import { offlineLine, promptIndexOf, VOTE_THOUGHTS } from "./offline";
 import { personaById, type Persona } from "./personas";
 
 /**
@@ -93,9 +94,26 @@ export async function generateLine(room: Room, trigger: "prompt" | "reply" | "nu
     );
     return { say: humanize(String(out.say ?? ""), persona, rand), thought: String(out.thought ?? "").slice(0, 140) };
   } catch {
-    const say = persona.fallback[Math.floor(rand() * persona.fallback.length)];
-    return { say: humanize(say, persona, rand), thought: "My brain lagged, so I said something generic." };
+    const line = offlineLine(offlineContext(room, trigger), rand);
+    return { say: humanize(line.say, persona, rand), thought: line.thought };
   }
+}
+
+function offlineContext(room: Room, trigger: "prompt" | "reply" | "nudge") {
+  const bot = room.bot!;
+  const me = playerById(room, bot.id)!;
+  const lastLine = [...room.transcript].reverse().find((l) => l.from !== bot.id && l.round === room.round);
+  const lastFrom = lastLine ? playerById(room, lastLine.from) : undefined;
+  return {
+    promptIndex: promptIndexOf(room.prompt),
+    trigger,
+    myAlias: me.alias,
+    last: lastLine && lastFrom ? { alias: lastFrom.alias, text: lastLine.text } : undefined,
+    others: alive(room)
+      .filter((p) => p.id !== bot.id)
+      .map((p) => p.alias),
+    said: room.transcript.filter((l) => l.from === bot.id).map((l) => l.text),
+  };
 }
 
 /** Small imperfections humans make: casing, trailing full stops, the odd typo. */
@@ -133,7 +151,7 @@ export async function chooseVote(room: Room, rand = Math.random): Promise<{ targ
     const counts: Record<string, number> = {};
     for (const t of Object.values(room.votes)) if (t !== me.id) counts[t] = (counts[t] ?? 0) + 1;
     const crowd = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
-    return { targetId: crowd ?? options[Math.floor(rand() * options.length)].id, thought: "Voting with the crowd. Safest place to hide." };
+    return { targetId: crowd ?? options[Math.floor(rand() * options.length)].id, thought: VOTE_THOUGHTS[Math.floor(rand() * VOTE_THOUGHTS.length)] };
   };
   try {
     const out = await completeJSON<{ vote: string; thought: string }>(
