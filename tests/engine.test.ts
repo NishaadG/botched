@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addMessage, castVote, createRoom, join, start, tick, viewFor } from "../src/lib/game/engine";
+import { addMessage, castVote, createRoom, join, start, tick, tickDue, viewFor } from "../src/lib/game/engine";
 
 const T0 = 1_000_000;
 const seq = (...xs: number[]) => {
@@ -101,4 +101,19 @@ test("the bot's planned message is delivered only after its typing delay", () =>
   assert.deepEqual(tick(room, T0 + 2500), [{ type: "botTyping" }]);
   assert.deepEqual(tick(room, T0 + 5100), [{ type: "botSay", text: "lol same" }]);
   assert.equal(room.bot!.plan, null);
+});
+
+test("ticks are only due when a timer ran out or the bot has something to deliver", () => {
+  const room = setup(3);
+  assert.equal(tickDue(room, T0 + 1000), false);
+  room.bot!.plan = { text: "hm", typingAt: T0 + 2000, dueAt: T0 + 5000, typingSent: false, reason: "reply" };
+  assert.equal(tickDue(room, T0 + 1500), false);
+  assert.equal(tickDue(room, T0 + 2500), true);
+  tick(room, T0 + 2500);
+  assert.equal(tickDue(room, T0 + 3000), false);
+  assert.equal(tickDue(room, T0 + 5100), true);
+  tick(room, T0 + 5100);
+  assert.equal(tickDue(room, T0 + 91_000), true, "chat phase ended");
+  const lobby = createRoom("QWERT", { id: "a", name: "A" }, T0);
+  assert.equal(tickDue(lobby, T0 + 10_000_000), false, "lobbies never tick");
 });

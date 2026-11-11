@@ -179,6 +179,13 @@ function finish(room: Room, winner: "humans" | "bot", now: number): Effect[] {
 }
 
 /** Advances timers. Safe to call often; does nothing until a deadline passes. */
+/** Cheap check so clock ticks only lock and write the room when something is actually due. */
+export function tickDue(room: Room, now: number) {
+  const plan = room.phase === "chat" ? room.bot?.plan : null;
+  if (plan && (now >= plan.dueAt || (!plan.typingSent && now >= plan.typingAt))) return true;
+  return Boolean(room.phaseEndsAt && now >= room.phaseEndsAt && room.phase !== "lobby" && room.phase !== "over");
+}
+
 export function tick(room: Room, now: number, rand: () => number = Math.random): Effect[] {
   const effects: Effect[] = [];
   const bot = room.bot;

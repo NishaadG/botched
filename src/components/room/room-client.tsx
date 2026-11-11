@@ -49,9 +49,12 @@ export function RoomClient() {
   // Server clock minus ours, so every player's countdown agrees.
   const [offset, setOffset] = useState(0);
   const versionRef = useRef(0);
+  // Who has the lobby open right now (only sent by the lobby poll).
+  const [online, setOnline] = useState<string[] | null>(null);
 
-  const apply = useCallback((v: RoomView) => {
+  const apply = useCallback((v: RoomView & { online?: string[] | null }) => {
     setOffset(v.serverNow - Date.now());
+    if (v.online !== undefined) setOnline(v.online);
     if (v.version >= versionRef.current) {
       versionRef.current = v.version;
       setView(v);
@@ -137,6 +140,14 @@ export function RoomClient() {
     const id = setInterval(() => post(code, "tick").then(apply).catch(() => {}), every);
     return () => clearInterval(id);
   }, [session, phase, isHost, code, apply]);
+
+  // Closing the tab in the lobby frees the seat (a reload simply rejoins).
+  useEffect(() => {
+    if (phase !== "lobby" || !session) return;
+    const bye = () => navigator.sendBeacon(`/api/rooms/${code}/leave`);
+    window.addEventListener("pagehide", bye);
+    return () => window.removeEventListener("pagehide", bye);
+  }, [phase, session, code]);
 
   // Safety net in case a real-time event is missed.
   useEffect(() => {
@@ -224,6 +235,8 @@ export function RoomClient() {
         <Lobby
           view={view}
           isHost={isHost}
+          meId={session.uid}
+          online={online}
           onStart={() => post(code, "start").then(apply)}
         />
       ) : view.phase === "over" ? (

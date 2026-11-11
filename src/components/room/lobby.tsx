@@ -4,7 +4,19 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import type { RoomView } from "@/lib/game/engine";
 
-export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boolean; onStart: () => Promise<unknown> }) {
+export function Lobby({
+  view,
+  isHost,
+  meId,
+  online,
+  onStart,
+}: {
+  view: RoomView;
+  isHost: boolean;
+  meId: string;
+  online: string[] | null;
+  onStart: () => Promise<unknown>;
+}) {
   const [link, setLink] = useState("");
   const [qr, setQr] = useState("");
   const [copied, setCopied] = useState(false);
@@ -12,7 +24,12 @@ export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boole
   const [error, setError] = useState("");
   const [posted, setPosted] = useState<"" | "busy" | "done">("");
   const humans = view.players;
-  const canStart = humans.length >= 2;
+  const isOnline = (id: string) => id === meId || !online || online.includes(id);
+  const present = humans.filter((p) => isOnline(p.id));
+  const canStart = present.length >= 2;
+  // If the host closed their tab, anyone still here can start.
+  const hostGone = !isOnline(view.hostId);
+  const canControl = isHost || hostGone;
 
   useEffect(() => {
     const url = `${window.location.origin}/r/${view.code}`;
@@ -83,9 +100,10 @@ export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boole
           <ul className="flex flex-wrap gap-2">
             {humans.map((p) => (
               <li key={p.id} className="flex items-center gap-2 rounded-full border border-line bg-panel-2 px-3 py-1.5 text-sm">
-                <span className="h-2 w-2 rounded-full bg-brand" />
-                {p.name}
+                <span className={`h-2 w-2 rounded-full ${isOnline(p.id) ? "bg-brand" : "bg-muted/40"}`} />
+                <span className={isOnline(p.id) ? "" : "text-muted"}>{p.name}</span>
                 {p.id === view.hostId && <span className="text-xs text-muted">host</span>}
+                {!isOnline(p.id) && <span className="text-xs text-muted">away</span>}
               </li>
             ))}
             <li className="flex items-center gap-2 rounded-full border border-dashed border-line px-3 py-1.5 text-sm text-muted">
@@ -95,7 +113,7 @@ export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boole
         </div>
 
         <div className="mt-auto">
-          {isHost ? (
+          {canControl ? (
             <button
               className="btn btn-brand w-full text-lg"
               disabled={!canStart || busy}
@@ -111,7 +129,13 @@ export function Lobby({ view, isHost, onStart }: { view: RoomView; isHost: boole
                 }
               }}
             >
-              {busy ? "Starting…" : canStart ? "Start the game" : "Waiting for at least 2 people"}
+              {busy
+                ? "Starting…"
+                : !canStart
+                  ? "Waiting for at least 2 people"
+                  : hostGone
+                    ? "Host left. Start anyway"
+                    : "Start the game"}
             </button>
           ) : (
             <p className="rounded-2xl border border-line bg-ink p-4 text-center text-muted">

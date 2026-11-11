@@ -59,6 +59,7 @@ export async function mutate(code: string, fn: (room: Room, now: number) => Effe
   const { room, effects } = await withLock(code, async () => {
     const room = await loadRoom(code);
     if (!room) throw new GameError("Room not found.");
+    const before = JSON.stringify(room);
     const effects = await fn(room, now);
     for (const e of effects) {
       if (e.type === "botSay" && room.bot) {
@@ -68,7 +69,8 @@ export async function mutate(code: string, fn: (room: Room, now: number) => Effe
         room.bot.linesThisRound += 1;
       }
     }
-    await saveRoom(room);
+    // Skip the write when nothing changed (most clock ticks), to save database commands.
+    if (effects.length || JSON.stringify(room) !== before) await saveRoom(room);
     return { room, effects };
   });
   await perform(room, effects);
@@ -170,4 +172,17 @@ async function recordStats(code: string) {
     }
     return [];
   });
+}
+
+/** Lobby presence: each open lobby tab refreshes a short-lived key, so closed tabs drop out. */
+export const PRESENCE_TTL = 25;
+
+export async function markSeen(code: string, uid: string) {
+  await kv.set(`seen:${code}:${uid}`, 1, PRESENCE_TTL);
+}
+
+export async function onlineIn(room: Room) {
+  const ids = room.players.filter((p) => !p.isBot).map((p) => p.id);
+  const seen = await kv.mget<number>(ids.map((id) => `seen:${room.code}:${id}`));
+  return ids.filter((_, i) => seen[i]);
 }
