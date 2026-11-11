@@ -65,7 +65,12 @@ export default function Leaderboard() {
         <header className="mx-auto w-full max-w-6xl px-4 pb-8 pt-10 md:pt-14">
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Leaderboard</p>
           <h1 className="mt-3 font-display text-5xl font-black md:text-6xl">Humans vs the bot</h1>
-          <p className="mt-3 max-w-xl text-lg text-muted">Every number here comes from finished games. Updated live.</p>
+          <p className="mt-3 max-w-xl text-lg text-muted">
+            Every number here comes from finished games. Updated live.{" "}
+            <Link href="/stats" className="text-cool hover:underline">
+              Daily stats →
+            </Link>
+          </p>
         </header>
       </div>
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 pb-20">

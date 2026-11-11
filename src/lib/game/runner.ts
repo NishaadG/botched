@@ -5,7 +5,7 @@ import { chooseVote, generateLine, shouldReply, timing } from "../bot/brain";
 import { personaById, PERSONAS } from "../bot/personas";
 import { sendGroupEvent, sendGroupText } from "../nexconn-server";
 import { kv } from "../store";
-import { emptyRecord, type PlayerRecord } from "../stats";
+import { dayKey, emptyRecord, type PlayerRecord } from "../stats";
 import { addMessage, castVote, GameError } from "./engine";
 import type { Effect, Room } from "./types";
 
@@ -145,9 +145,13 @@ async function recordStats(code: string) {
     await kv.incr("stats:games");
     await kv.incr(humansWon ? "stats:humanWins" : "stats:botWins");
     await kv.incr("stats:messages", room.transcript.length);
+    const day = dayKey();
+    await kv.incr(`day:games:${day}`);
+    await kv.incr(`day:messages:${day}`, room.transcript.length);
     for (const p of humans) {
       const caught = humansWon && !!final && room.votes[p.id] === final.playerId;
       await kv.sadd("stats:players", p.id);
+      await kv.sadd(`day:players:${day}`, p.id);
       await kv.zincr("lb:games", p.id, 1);
       if (caught) await kv.zincr("lb:catches", p.id, 1);
       if (humansWon && p.alive) await kv.zincr("lb:survived", p.id, 1);

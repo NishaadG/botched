@@ -1,10 +1,13 @@
 import { issueAccessToken } from "@/lib/nexconn-server";
 import { cleanName, getSession, newUserId, saveSession } from "@/lib/session";
+import { dayKey } from "@/lib/stats";
 import { kv } from "@/lib/store";
 
 export async function GET() {
   const session = await getSession();
   if (!session) return Response.json({ session: null });
+  // Count returning players as active today.
+  await kv.sadd(`day:visitors:${dayKey()}`, session.uid);
   return Response.json({
     session: { uid: session.uid, name: session.name, token: session.token },
     appKey: process.env.NEXT_PUBLIC_NEXCONN_APP_KEY,
@@ -23,7 +26,11 @@ export async function POST(request: Request) {
     const token = existing && existing.name === name ? existing.token : await issueAccessToken(uid, name);
     const session = { uid, name, token, createdAt: existing?.createdAt ?? Date.now() };
     await saveSession(session);
-    await Promise.all([kv.sadd("stats:visitors", uid), kv.set(`name:${uid}`, name)]);
+    await Promise.all([
+      kv.sadd("stats:visitors", uid),
+      kv.sadd(`day:visitors:${dayKey()}`, uid),
+      kv.set(`name:${uid}`, name),
+    ]);
     return Response.json({ session: { uid, name, token }, appKey: process.env.NEXT_PUBLIC_NEXCONN_APP_KEY });
   } catch (err) {
     console.error("[session] token issue failed", err);

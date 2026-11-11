@@ -13,6 +13,17 @@ export interface PlayerRecord {
   recent: { code: string; at: number; won: boolean; rounds: number; players: number; botAlias: string }[];
 }
 
+/** UTC day bucket, e.g. 2026-11-11. */
+export const dayKey = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
+
+export interface Feedback {
+  name: string;
+  rating: number;
+  text: string;
+  code: string;
+  at: number;
+}
+
 export const emptyRecord = (): PlayerRecord => ({ games: 0, wins: 0, catches: 0, fooled: 0, lastPlayed: 0, recent: [] });
 
 export async function getGlobalStats() {
@@ -78,4 +89,31 @@ export async function getNextGameVotes(uid?: string) {
   const scores = await Promise.all(NEXT_GAMES.map((g) => kv.zscore("votes:next", g.id)));
   const mine = uid ? await kv.get<string>(`nextvote:${uid}`) : null;
   return { counts: Object.fromEntries(NEXT_GAMES.map((g, i) => [g.id, scores[i]])) as Record<string, number>, mine };
+}
+
+/** Last `days` days of activity, oldest first. Players and visitors are unique per day. */
+export async function getDailySeries(days = 14) {
+  await connection();
+  const keys = Array.from({ length: days }, (_, i) => dayKey(Date.now() - (days - 1 - i) * 86_400_000));
+  const [games, messages, players, visitors] = await Promise.all([
+    kv.mget<number>(keys.map((d) => `day:games:${d}`)),
+    kv.mget<number>(keys.map((d) => `day:messages:${d}`)),
+    Promise.all(keys.map((d) => kv.scard(`day:players:${d}`))),
+    Promise.all(keys.map((d) => kv.scard(`day:visitors:${d}`))),
+  ]);
+  return keys.map((day, i) => ({
+    day,
+    games: Number(games[i] ?? 0),
+    messages: Number(messages[i] ?? 0),
+    players: players[i],
+    visitors: visitors[i],
+  }));
+}
+
+export async function getFeedback(n = 30) {
+  await connection();
+  const list = await kv.lrange<Feedback>("feedback", 200);
+  const rated = list.filter((f) => f.rating >= 1);
+  const avg = rated.length ? rated.reduce((a, f) => a + f.rating, 0) / rated.length : null;
+  return { count: list.length, avg, recent: list.filter((f) => f.text).slice(0, n) };
 }

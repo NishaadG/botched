@@ -8,6 +8,7 @@ import type { RoomView } from "@/lib/game/engine";
 import type { IncomingMessage } from "@/lib/nexconn-client";
 import { PERSONAS } from "@/lib/bot/personas";
 import { Avatar, MessageList } from "./chat";
+import { FeedbackCard } from "./feedback";
 
 type PlayerView = RoomView["players"][number];
 
@@ -88,6 +89,8 @@ export function Results({
             </Link>
           </div>
         </motion.div>
+
+        {view.you && <FeedbackCard code={view.code} />}
 
         <div className="card p-5">
           <p className="mb-3 text-xs uppercase tracking-widest text-muted">Who was who</p>

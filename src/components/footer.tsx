@@ -14,6 +14,7 @@ export function Footer() {
           <Link href="/how-to-play" className="hover:text-text">How to play</Link>
           <Link href="/lounge" className="hover:text-text">Lounge</Link>
           <Link href="/leaderboard" className="hover:text-text">Leaderboard</Link>
+          <Link href="/stats" className="hover:text-text">Live stats</Link>
           <Link href="/me" className="hover:text-text">Your stats</Link>
         </nav>
       </div>

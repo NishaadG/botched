@@ -17,6 +17,9 @@ interface KV {
   zscore(key: string, member: string): Promise<number>;
   mget<T>(keys: string[]): Promise<(T | null)[]>;
   sadd(key: string, member: string): Promise<void>;
+  /** Pushes to the front of a list and trims it to `max` items. */
+  lpush<T>(key: string, value: T, max: number): Promise<void>;
+  lrange<T>(key: string, n: number): Promise<T[]>;
   scard(key: string): Promise<number>;
 }
 
@@ -74,6 +77,13 @@ function memoryKV(): KV {
       s.add(member);
       m.set(key, { v: [...s] });
     },
+    async lpush(key, value, max) {
+      const list = (live(key)?.v as unknown[]) ?? [];
+      m.set(key, { v: [structuredClone(value), ...list].slice(0, max) });
+    },
+    async lrange<T>(key: string, n: number) {
+      return structuredClone(((live(key)?.v as T[]) ?? []).slice(0, n));
+    },
     async scard(key) {
       return ((live(key)?.v as string[]) ?? []).length;
     },
@@ -116,6 +126,13 @@ function redisKV(redis: Redis): KV {
     },
     async sadd(key, member) {
       await redis.sadd(key, member);
+    },
+    async lpush(key, value, max) {
+      await redis.lpush(key, value);
+      await redis.ltrim(key, 0, max - 1);
+    },
+    async lrange<T>(key: string, n: number) {
+      return redis.lrange<T>(key, 0, n - 1);
     },
     async scard(key) {
       return redis.scard(key);

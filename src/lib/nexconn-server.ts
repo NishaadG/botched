@@ -1,4 +1,5 @@
 import "server-only";
+import { checkWebhookSignature } from "./webhook-signature";
 import { createHash, randomBytes } from "node:crypto";
 
 /**
@@ -125,7 +126,5 @@ export function sendOpenText(channelId: string, fromUserId: string, text: string
 
 /** Verifies the signature Nexconn puts on webhook deliveries. */
 export function verifyWebhookSignature(nonce: string | null, timestamp: string | null, signature: string | null) {
-  if (!nonce || !timestamp || !signature || !APP_SECRET) return false;
-  const expected = createHash("sha1").update(APP_SECRET + nonce + timestamp).digest("hex");
-  return expected === signature.toLowerCase();
+  return checkWebhookSignature(APP_SECRET, nonce, timestamp, signature);
 }
