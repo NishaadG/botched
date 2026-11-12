@@ -39,3 +39,10 @@ test("reacts to the last speaker by name and fills every placeholder", () => {
     assert.doesNotMatch(out.say, /\{|\}/);
   }
 });
+
+test("persona touches never let a line repeat", () => {
+  const said: string[] = [];
+  for (let i = 0; i < 4; i++) said.push(offlineLine({ ...base, persona: "hostel", trigger: "prompt", said }, seq(0, 0.1)).say);
+  const cores = said.map((s) => s.replace(/ (yaar|bro|scene hai|bas)$/, ""));
+  assert.equal(new Set(cores).size, 4);
+});

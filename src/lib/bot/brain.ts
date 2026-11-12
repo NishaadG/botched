@@ -127,6 +127,7 @@ function offlineContext(room: Room, bot: BotState, trigger: "prompt" | "reply" |
   const lastFrom = lastLine ? playerById(room, lastLine.from) : undefined;
   return {
     mode: room.mode ?? "classic",
+    persona: bot.personaId,
     promptIndex: promptIndexOf(room.prompt),
     trigger,
     myAlias: me.alias,

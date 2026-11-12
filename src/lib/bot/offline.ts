@@ -90,6 +90,8 @@ const THOUGHTS = {
 export interface OfflineContext {
   /** classic: blend in as a human. reverse: an AI hunting the one human. */
   mode?: "classic" | "reverse";
+  /** Persona id, so offline lines still sound like that character. */
+  persona?: string;
   promptIndex: number;
   trigger: "prompt" | "reply" | "nudge";
   myAlias: string;
@@ -103,9 +105,24 @@ export interface OfflineContext {
 
 const first = (alias: string) => alias.split(" ")[0].toLowerCase();
 
+/** Small per-character touches so the three personas don't sound identical offline. */
+function flavor(say: string, persona: string | undefined, rand: Rand) {
+  if (!say) return say;
+  if (persona === "hostel" && rand() < 0.35) return `${say} ${pick(["yaar", "bro", "scene hai", "bas"], rand)}`;
+  if (persona === "keen" && rand() < 0.4) return `${say}${pick(["!", "!!", " 😂", " haha"], rand)}`;
+  if (persona === "chill") return say.replace(/[.!]+$/, "");
+  return say;
+}
+
 export function offlineLine(ctx: OfflineContext, rand: Rand = Math.random): { say: string; thought: string } {
+  const out = offlineLineInner(ctx, rand);
+  return ctx.mode === "reverse" ? out : { ...out, say: flavor(out.say, ctx.persona, rand) };
+}
+
+function offlineLineInner(ctx: OfflineContext, rand: Rand): { say: string; thought: string } {
   const fresh = (pool: readonly string[]) => {
-    const unused = pool.filter((l) => !ctx.said.some((s) => s.toLowerCase() === l.toLowerCase()));
+    // "contains", not "equals": persona touches like a trailing "yaar" must not hide a repeat.
+    const unused = pool.filter((l) => !ctx.said.some((s) => s.toLowerCase().includes(l.toLowerCase())));
     return pick(unused.length ? unused : pool, rand);
   };
   const others = ctx.others.filter((a) => a !== ctx.myAlias);
