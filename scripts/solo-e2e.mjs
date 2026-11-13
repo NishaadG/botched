@@ -14,12 +14,12 @@ const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(`console: ${m.text()}`));
 
-await page.goto(`${BASE}/play/whos-the-bot`);
+// The landing page's "Play solo now" button: a nickname, then straight into a solo room.
+await page.goto(`${BASE}/play/whos-the-bot?solo=1`);
 await page.fill("#nick", "Solo");
-await page.click("text=Continue");
-await page.waitForSelector("text=Play solo vs 3 AIs");
-const code = await page.evaluate(async () => (await (await fetch("/api/rooms?fast=1&mode=reverse", { method: "POST" })).json()).code);
-await page.goto(`${BASE}/r/${code}`);
+await page.click("text=Play solo vs 3 AIs");
+await page.waitForURL(/\/r\/[A-Z]+$/, { timeout: 20000 });
+const code = page.url().split("/").pop();
 await page.waitForSelector("text=You vs three AIs");
 await page.screenshot({ path: `${OUT}/solo-1-lobby.png` });
 await page.click("text=Start the solo game");
