@@ -41,7 +41,7 @@ The bot is built to blend in, not to be helpful:
 | **Message history** | Rejoining players load the room's history; the results screen replays the whole chat with names revealed. |
 | **Custom message types** | `BT:Game` (persisted game events that tell clients to refresh) and `BT:Typing` (a status message used as a typing indicator in group chats). |
 | **Server API** | Access tokens for every guest (each player is a real Nexconn user), group create/join/dismiss, and server-side sends so the game master and the AI player post as their own users. |
-| **Webhooks** | `group_channel:pre_messaging` enforces the rules before delivery (only living players, only during the chat phase). `open_channel:pre_messaging` masks swears in the public lounge. `message:send` gives the server its own copy of every game message. `src/app/api/nexconn/webhook/route.ts` |
+| **Webhooks** | `message:send` gives the server its own copy of every game message. Handlers for `group_channel:pre_messaging` (only living players, only during the chat phase) and `open_channel:pre_messaging` (masks swears in the lounge) are built and tested; Nexconn offers those two events on its Free and Pro chat plans, not on Starter. `src/app/api/nexconn/webhook/route.ts` |
 | **Connection status** | Live/reconnecting indicator in the room header. |
 
 ## Architecture
@@ -86,7 +86,7 @@ npm run dev                  # http://localhost:3000
 | `SESSION_SECRET` | Signing guest session cookies |
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs in share images |
 
-To enable webhooks, point Nexconn's webhook URL at `https://<your-site>/api/nexconn/webhook` and subscribe to `message:send`, `group_channel:pre_messaging` and `open_channel:pre_messaging`.
+To enable webhooks, point Nexconn's webhook URL at `https://<your-site>/api/nexconn/webhook` and subscribe to `message:send` (plus `group_channel:pre_messaging` and `open_channel:pre_messaging` if your plan offers them).
 
 ## Tests
 
