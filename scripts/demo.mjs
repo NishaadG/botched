@@ -136,8 +136,31 @@ await host.page.mouse.wheel(0, 500);
 await wait(3000);
 await host.page.mouse.wheel(0, -500);
 await caption(host.page, "Share the result. Rate the game. Play again.", 3000);
-await host.page.goto(`${BASE}/stats`);
-await caption(host.page, "Every number is public and counted live", 3500);
+// 7. Public numbers, once real games exist (test games like this one never count, so early on there is nothing to show).
+const hasNumbers = await host.page.evaluate(async () => (await (await fetch("/")).text()).includes("Live from real games"));
+if (hasNumbers) {
+  await host.page.goto(`${BASE}/stats`);
+  await caption(host.page, "Every number is public and counted live", 3500);
+}
+
+// 8. Solo mode: one human, three AIs hunting them.
+const solo = await host.page.evaluate(async () => (await (await fetch("/api/rooms?fast=1&mode=reverse", { method: "POST" })).json()).code);
+await host.page.goto(`${BASE}/r/${solo}`);
+await host.page.waitForSelector("text=Start the solo game");
+await caption(host.page, "Nobody around? Solo mode flips it: you're the only human among three AIs.", 3500);
+await host.page.click("text=Start the solo game");
+await host.page.waitForSelector("text=Round 1", { timeout: 20000 });
+await caption(host.page, "Pass as a bot. The AIs hunt for typos, slang and feelings.", 0);
+await wait(5000);
+await typeAndSend(host, "Acknowledged. I do not experience weekends. I optimise them.");
+// Stay until at least two AIs have answered (they think before typing, like the classic bot).
+// The chat list holds 2 Game Master lines + the human's line, so 5+ items means 2+ AI replies.
+await host.page
+  .waitForFunction(() => (document.querySelector('ul[aria-relevant="additions"]')?.children.length ?? 0) >= 5, null, { timeout: 35000 })
+  .catch(() => {});
+await wait(6000);
+await caption(host.page, "", 0);
+
 await host.page.goto(`${BASE}/lounge`);
 await caption(host.page, "No friends online? Find players in the lounge.", 3500);
 await caption(host.page, "Botched. Built on Nexconn Chat.", 3000);

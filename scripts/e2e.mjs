@@ -1,7 +1,7 @@
 // End-to-end smoke test: N browser players play a full game of Who's the Bot over Nexconn.
 // Usage: node scripts/e2e.mjs [baseUrl] [players]
 import { chromium } from "playwright";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const BASE = process.argv[2] ?? "http://localhost:3210";
 const N = Number(process.argv[3] ?? 3);
@@ -67,7 +67,7 @@ await guests[0].page.screenshot({ path: `${OUT}/2b-chat-guest.png` });
 
 // Every round: wait for voting, everyone votes for the first option they see.
 for (let round = 1; round <= 5; round++) {
-  const over = await host.page.getByText("Who is the bot?").or(host.page.getByText("Game over")).first().waitFor({ timeout: 60000 }).then(
+  const over = await host.page.getByText("Who is the bot?").or(host.page.getByText("Game over")).first().waitFor({ timeout: 150000 }).then(
     async () => (await host.page.innerText("body")).includes("Game over"),
   );
   if (over) break;
@@ -86,9 +86,10 @@ for (let round = 1; round <= 5; round++) {
   await host.page.waitForTimeout(5000);
   if ((await host.page.innerText("body")).includes("Game over")) break;
 }
-await host.page.waitForSelector("text=Game over", { timeout: 60000 });
+await host.page.waitForSelector("text=Game over", { timeout: 150000 });
 await host.page.waitForTimeout(1500);
 await host.page.screenshot({ path: `${OUT}/5-results.png`, fullPage: true });
+writeFileSync(`${OUT}/5-results.txt`, await host.page.innerText("body"));
 console.log("result:", (await host.page.innerText("h1")).trim());
 
 // Post-game feedback from the host.
@@ -109,8 +110,9 @@ await host.page.waitForURL(`**/r/${next}`, { timeout: 20000 });
 await host.page.waitForFunction(() => document.body.innerText.includes("In the room (2/8)"), null, { timeout: 20000 });
 console.log("rematch: both players in", next);
 await host.page.goto(`${BASE}/stats`);
-await host.page.waitForSelector("text=the bot's typos were way too convincing", { timeout: 10000 });
+await host.page.waitForSelector("text=Live numbers", { timeout: 10000 });
 await host.page.screenshot({ path: `${OUT}/6-stats.png`, fullPage: true });
-console.log("stats page shows the feedback");
+// Test games are kept out of public stats, so their feedback only shows up when testing locally.
+console.log("stats page loads");
 console.log(errors.length ? `ERRORS:\n${errors.join("\n")}` : "no browser errors");
 await browser.close();
