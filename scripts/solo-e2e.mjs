@@ -7,7 +7,9 @@ const BASE = process.argv[2] ?? "http://localhost:3210";
 const OUT = process.env.E2E_OUT ?? "e2e-shots";
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? "chrome" });
-const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+await ctx.addCookies([{ name: "botched_test", value: "1", url: BASE }]); // keep test games out of public stats
+const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(`console: ${m.text()}`));

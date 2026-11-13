@@ -24,6 +24,6 @@ export async function POST(request: Request) {
     .trim()
     .slice(0, 280);
   const entry: Feedback = { name: session.name, rating, text, code, at: Date.now() };
-  await kv.lpush("feedback", entry, 500);
+  if (!room.test) await kv.lpush("feedback", entry, 500);
   return Response.json({ ok: true });
 }

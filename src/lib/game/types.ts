@@ -78,6 +78,8 @@ export interface Room {
   settings: { chatSeconds: number; voteSeconds: number; revealSeconds: number };
   version: number;
   statsRecorded?: boolean;
+  /** Created by an automated test: never counted in stats or shown in feedback. */
+  test?: boolean;
   /** Code of the follow-up room, once someone starts a rematch. */
   rematch?: string;
   /** Last time an AI was asked to break a silence. */

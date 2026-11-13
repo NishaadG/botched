@@ -10,6 +10,7 @@ const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? "chr
 const errors = [];
 const open = async (name, viewport) => {
   const ctx = await browser.newContext({ viewport });
+  await ctx.addCookies([{ name: "botched_test", value: "1", url: BASE }]); // keep test visits out of public stats
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${name}: ${e.message}`));
   page.on("console", (m) => m.type() === "error" && errors.push(`${name} console: ${m.text()}`));

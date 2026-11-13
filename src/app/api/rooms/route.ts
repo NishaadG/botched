@@ -1,7 +1,7 @@
 import { createRoom } from "@/lib/game/engine";
 import { loadRoom, newRoomCode, saveRoom } from "@/lib/game/runner";
 import { createGroupChannel } from "@/lib/nexconn-server";
-import { getSession } from "@/lib/session";
+import { getSession, isTestClient } from "@/lib/session";
 import { limited } from "@/lib/store";
 
 export async function POST(request: Request) {
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   if (fastAllowed && new URL(request.url).searchParams.get("fast") === "1") {
     room.settings = { chatSeconds: 25, voteSeconds: 15, revealSeconds: 4 };
   }
+  if (await isTestClient()) room.test = true;
   try {
     await createGroupChannel(room.channelId, session.uid, `${mode === "reverse" ? "Who's the Human" : "Who's the Bot"} · ${code}`, [session.uid]);
   } catch (err) {

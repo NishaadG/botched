@@ -25,6 +25,7 @@ for (const name of NAMES) {
   const ctx = await browser.newContext(
     phone ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 800 } },
   );
+  await ctx.addCookies([{ name: "botched_test", value: "1", url: BASE }]); // keep test games out of public stats
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${name}: ${e.message}`));
   page.on("console", (m) => {

@@ -11,6 +11,11 @@ export interface Session {
 }
 
 const COOKIE = "botched_session";
+
+/** Automated test browsers set this cookie so their games stay out of the public numbers. */
+export async function isTestClient() {
+  return (await cookies()).get("botched_test")?.value === "1";
+}
 const SECRET = process.env.SESSION_SECRET || "dev-only-secret-change-me";
 
 function sign(payload: string) {

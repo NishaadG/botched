@@ -149,6 +149,7 @@ async function recordStats(code: string) {
   await mutate(code, async (room) => {
     if (room.statsRecorded) return [];
     room.statsRecorded = true;
+    if (room.test) return [];
     const humansWon = room.winner === "humans";
     const solo = room.mode === "reverse";
     const final = room.eliminations.at(-1);
