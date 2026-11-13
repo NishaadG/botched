@@ -45,11 +45,12 @@ export function Lobby({
     });
   }, [view.code]);
 
+  const invite = "One of us is secretly an AI. Join my Who's the Bot room:";
   const share = async () => {
-    const text = `One of us is secretly an AI. Join my Who's the Bot room: ${link}`;
     if (navigator.share) {
+      // The share sheet appends the url itself, so the text leaves it out.
       await navigator
-        .share({ title: "Who's the Bot", text, url: link })
+        .share({ title: "Who's the Bot", text: invite, url: link })
         .catch(() => {});
     } else {
       await navigator.clipboard.writeText(link);
@@ -114,6 +115,14 @@ export function Lobby({
               <button className="btn btn-ghost" onClick={share}>
                 {copied ? "Link copied ✓" : "Share invite link"}
               </button>
+              <a
+                className="btn btn-ghost py-2 text-sm"
+                href={`https://wa.me/?text=${encodeURIComponent(`${invite} ${link}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Send on WhatsApp
+              </a>
               <button
                 className="btn btn-ghost py-2 text-sm"
                 onClick={postToLounge}
