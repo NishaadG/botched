@@ -30,15 +30,18 @@ const SCRIPT: Line[] = [
   { kind: "reveal", who: 3 },
 ];
 
+// Open mid-conversation so the preview never starts as an empty box.
+const FIRST = 3;
+
 export function DemoChat() {
   const reduce = useReducedMotion();
-  const [step, setStep] = useState(reduce ? SCRIPT.length : 1);
+  const [step, setStep] = useState(reduce ? SCRIPT.length : FIRST);
 
   useEffect(() => {
     if (reduce) return;
     const done = step >= SCRIPT.length;
     const delay = done ? 4200 : SCRIPT[step]?.kind === "typing" ? 1100 : 1500;
-    const id = setTimeout(() => setStep((s) => (s >= SCRIPT.length ? 1 : s + 1)), delay);
+    const id = setTimeout(() => setStep((s) => (s >= SCRIPT.length ? FIRST : s + 1)), delay);
     return () => clearTimeout(id);
   }, [step, reduce]);
 
@@ -65,7 +68,7 @@ export function DemoChat() {
           ))}
         </div>
       </div>
-      <ul className="flex h-[420px] flex-col justify-end gap-2.5 overflow-hidden p-4" aria-label="Example game chat">
+      <ul className="flex h-[340px] flex-col md:h-[420px] justify-end gap-2.5 overflow-hidden p-4" aria-label="Example game chat">
         <AnimatePresence initial={false} mode="popLayout">
           {visible.map((l) => {
             const key = SCRIPT.indexOf(l);

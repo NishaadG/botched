@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Footer } from "@/components/footer";
-import { LiveStats, LiveStatsSkeleton } from "@/components/hub/live-stats";
+import { LiveStatsSection } from "@/components/hub/live-stats";
 import { Nav } from "@/components/nav";
 import { getBoard, type BoardKey } from "@/lib/stats";
 
@@ -75,8 +75,8 @@ export default function Leaderboard() {
         </header>
       </div>
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 pb-20">
-        <Suspense fallback={<LiveStatsSkeleton />}>
-          <LiveStats />
+        <Suspense fallback={null}>
+          <LiveStatsSection />
         </Suspense>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {BOARDS.map((b) => (

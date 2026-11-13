@@ -102,7 +102,7 @@ export function LoungeClient() {
   if (loading) return <div className="card h-[70dvh] animate-pulse" />;
   if (!session) {
     return (
-      <div className="card mx-auto w-full max-w-md p-6">
+      <div className="card w-full max-w-md p-6">
         <h2 className="mb-1 font-display text-2xl font-bold">Join the lounge</h2>
         <p className="mb-4 text-sm text-muted">Chat with other players and jump into open games.</p>
         <NicknameForm cta="Enter the lounge" onSubmit={saveName} />

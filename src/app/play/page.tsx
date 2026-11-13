@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Footer } from "@/components/footer";
-import { LiveStats, LiveStatsSkeleton } from "@/components/hub/live-stats";
+import { LiveStatsSection } from "@/components/hub/live-stats";
 import { NextGameVote } from "@/components/hub/next-game-vote";
 import { Nav } from "@/components/nav";
 import { NEXT_GAMES } from "@/lib/stats";
@@ -74,14 +74,9 @@ export default function Hub() {
           </div>
         </Link>
 
-        <section>
-          <h2 className="font-display text-2xl font-extrabold md:text-3xl">So far</h2>
-          <div className="mt-4">
-            <Suspense fallback={<LiveStatsSkeleton />}>
-              <LiveStats />
-            </Suspense>
-          </div>
-        </section>
+        <Suspense fallback={null}>
+          <LiveStatsSection title="So far" />
+        </Suspense>
 
         <section>
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">

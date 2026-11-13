@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { getGlobalStats } from "@/lib/stats";
 
 const fmt = (n: number) => new Intl.NumberFormat("en", { notation: n > 9999 ? "compact" : "standard" }).format(n);
@@ -32,5 +33,22 @@ export function LiveStatsSkeleton({ compact = false }: { compact?: boolean }) {
         <div key={i} className="h-[68px] animate-pulse rounded-2xl border border-line bg-ink/60" />
       ))}
     </div>
+  );
+}
+
+/** A titled block of live counters that stays hidden until the first game has finished (a row of zeros sells nothing). */
+export async function LiveStatsSection({ title, aside, className = "" }: { title?: string; aside?: ReactNode; className?: string }) {
+  const { games } = await getGlobalStats();
+  if (!games) return null;
+  return (
+    <section className={className}>
+      {title && (
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <h2 className="font-display text-2xl font-extrabold md:text-3xl">{title}</h2>
+          {aside}
+        </div>
+      )}
+      <LiveStats />
+    </section>
   );
 }

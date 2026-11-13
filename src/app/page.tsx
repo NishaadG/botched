@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Footer } from "@/components/footer";
-import { LiveStats, LiveStatsSkeleton } from "@/components/hub/live-stats";
+import { LiveStatsSection } from "@/components/hub/live-stats";
 import { DemoChat } from "@/components/landing/demo-chat";
 import { Nav } from "@/components/nav";
 import { ANDROID_APK_URL } from "@/lib/constants";
@@ -70,17 +70,17 @@ export default function Home() {
       </div>
 
       <main className="flex flex-col gap-24 py-20">
-        <section className="mx-auto w-full max-w-6xl px-4">
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl font-extrabold md:text-3xl">Live from real games</h2>
-            <Link href="/leaderboard" className="text-sm text-cool hover:underline">
-              Leaderboard →
-            </Link>
-          </div>
-          <Suspense fallback={<LiveStatsSkeleton />}>
-            <LiveStats />
-          </Suspense>
-        </section>
+        <Suspense fallback={null}>
+          <LiveStatsSection
+            title="Live from real games"
+            className="mx-auto w-full max-w-6xl px-4"
+            aside={
+              <Link href="/leaderboard" className="text-sm text-cool hover:underline">
+                Leaderboard →
+              </Link>
+            }
+          />
+        </Suspense>
 
         <section className="mx-auto w-full max-w-6xl px-4">
           <h2 className="font-display text-4xl font-extrabold md:text-5xl">How a game goes</h2>
@@ -138,3 +138,4 @@ export default function Home() {
     </div>
   );
 }
+
