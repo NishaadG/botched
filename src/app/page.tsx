@@ -54,14 +54,14 @@ export default function Home() {
               <Link href="/play/whos-the-bot" className="btn btn-brand px-7 py-4 text-lg">
                 Start a game
               </Link>
-              <Link href="/how-to-play" className="btn btn-ghost px-6 py-4 text-lg">
-                How it works
+              <Link href="/play/whos-the-bot?solo=1" className="btn btn-ghost px-6 py-4 text-lg">
+                Play solo now
               </Link>
             </div>
             <p className="mt-4 text-sm text-muted">
-              2 to 8 players · 5 minutes · works on any phone ·{" "}
-              <Link href="/play/whos-the-bot" className="text-cool hover:underline">
-                alone? play solo vs 3 AIs
+              2 to 8 friends, or solo against 3 AIs · 5 minutes · any phone ·{" "}
+              <Link href="/how-to-play" className="text-cool hover:underline">
+                how it works
               </Link>
             </p>
           </div>

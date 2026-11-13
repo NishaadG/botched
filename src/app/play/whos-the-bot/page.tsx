@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Nav } from "@/components/nav";
 import { NicknameForm, useSession } from "@/components/session";
+
+const noop = () => () => {};
 
 export default function WhosTheBotStart() {
   const router = useRouter();
@@ -12,6 +14,13 @@ export default function WhosTheBotStart() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [renaming, setRenaming] = useState(false);
+  // "?solo=1" (the landing page's solo button) goes straight into a solo game once there's a nickname.
+  const soloIntent = useSyncExternalStore(
+    noop,
+    () => new URLSearchParams(window.location.search).get("solo") === "1",
+    () => false,
+  );
+  const started = useRef(false);
 
   const create = async (mode: "classic" | "reverse" = "classic") => {
     setBusy(true);
@@ -26,6 +35,14 @@ export default function WhosTheBotStart() {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (!soloIntent || !session || renaming || started.current) return;
+    started.current = true;
+    void create("reverse");
+    // create only reads state setters, so it is safe to leave out of the dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soloIntent, session, renaming]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-grid">
@@ -50,12 +67,23 @@ export default function WhosTheBotStart() {
         </div>
 
         <div className="card p-6 md:p-8">
-          {loading ? (
-            <div className="h-48 animate-pulse rounded-2xl bg-panel-2" />
+          {loading || (soloIntent && session && !renaming && !error) ? (
+            <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-2xl bg-panel-2 text-muted">
+              {soloIntent && session ? (
+                <>
+                  <span className="text-3xl" aria-hidden>
+                    🤖🤖🤖
+                  </span>
+                  Setting up your solo game…
+                </>
+              ) : (
+                <span className="sr-only">Loading</span>
+              )}
+            </div>
           ) : !session || renaming ? (
             <NicknameForm
               initial={session?.name}
-              cta={renaming ? "Save" : "Continue"}
+              cta={renaming ? "Save" : soloIntent ? "Play solo vs 3 AIs" : "Continue"}
               onSubmit={async (n) => {
                 await saveName(n);
                 setRenaming(false);
