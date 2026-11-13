@@ -22,21 +22,25 @@ export function shouldReply(room: Room, botId: string, trigger: "prompt" | "repl
   const roundLines = room.transcript.filter((l) => l.round === room.round);
   const last = roundLines.at(-1);
   if (last?.from === bot.id) return false;
-  const addressed = last ? mentionsMe(last.text, me.alias) : false;
-  if (addressed) return true;
-  if (now - bot.lastSpokeAt < 5000) return false;
-
   // Keep the bot's share of the conversation close to an average player's share.
   const players = alive(room).length;
   const fairShare = roundLines.length / players;
+  // Someone used its alias: answer, unless it has already been hogging the chat.
+  if (last && namesMe(last.text, me.alias) && bot.linesThisRound <= fairShare + 2) return true;
+  if (now - bot.lastSpokeAt < 5000) return false;
   if (bot.linesThisRound > fairShare + 1) return false;
-  return rand() < persona.chattiness;
+  // "bot" and "AI" come up constantly in this game. Jumping on every mention would itself be a tell,
+  // so a mention only makes a reply a bit more likely.
+  const topical = last ? /\b(bot|ai|robot|chatgpt)\b/i.test(last.text) : false;
+  return rand() < Math.min(0.9, persona.chattiness + (topical ? 0.2 : 0));
 }
 
-function mentionsMe(text: string, alias: string) {
-  const t = text.toLowerCase();
-  const [first, second] = alias.toLowerCase().split(" ");
-  return t.includes(first) || t.includes(second) || /\b(bot|ai|robot|chatgpt)\b/.test(t);
+function namesMe(text: string, alias: string) {
+  const words = text.toLowerCase().split(/[^a-z]+/);
+  return alias
+    .toLowerCase()
+    .split(" ")
+    .some((w) => words.includes(w));
 }
 
 function transcriptFor(room: Room, bot: BotState) {
