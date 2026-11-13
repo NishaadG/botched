@@ -33,14 +33,14 @@ const lines = [
   "Statistically, most humans would say the same.",
 ];
 for (let round = 1; round <= 3; round++) {
-  const over = await page.getByText("Who is the human?", { exact: true }).or(page.getByText("Game over")).first().waitFor({ timeout: 60000 })
+  const over = await page.getByText("Who is the human?", { exact: true }).or(page.getByText("Game over")).first().waitFor({ timeout: 150000 })
     .then(async () => (await page.innerText("body")).includes("Game over"));
   if (over) break;
   if (round === 1) await page.screenshot({ path: `${OUT}/solo-2-vote.png` });
   await page.locator(".absolute.inset-x-0 button").first().click().catch(() => {});
-  await page.getByText("was voted out").or(page.getByText("Tie vote")).or(page.getByText("tie")).first().waitFor({ timeout: 40000 }).catch(() => {});
+  await page.getByText("was voted out").or(page.getByText("Tie vote")).or(page.getByText("tie")).first().waitFor({ timeout: 60000 }).catch(() => {});
   // Next round, or the AIs already found the human.
-  await page.getByText(`Round ${round + 1}`).or(page.getByText("Game over")).first().waitFor({ timeout: 40000 }).catch(() => {});
+  await page.getByText(`Round ${round + 1}`).or(page.getByText("Game over")).first().waitFor({ timeout: 60000 }).catch(() => {});
   if ((await page.innerText("body")).includes("Game over")) break;
   const input = page.locator('input[aria-label="Message"]');
   if ((await input.count()) && !(await input.isDisabled())) {
@@ -48,7 +48,7 @@ for (let round = 1; round <= 3; round++) {
     await page.click('button[aria-label="Send"]');
   }
 }
-await page.waitForSelector("text=Game over", { timeout: 90000 });
+await page.waitForSelector("text=Game over", { timeout: 200000 });
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${OUT}/solo-3-results.png`, fullPage: true });
 console.log("result:", (await page.innerText("h1")).trim());

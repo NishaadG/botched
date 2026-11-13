@@ -1,6 +1,6 @@
 import "server-only";
 import { alive, botById, isReverse, playerById } from "../game/engine";
-import type { BotState, Room } from "../game/types";
+import type { BotState, Player, Room } from "../game/types";
 import { completeJSON } from "./llm";
 import { humanScore, offlineLine, promptIndexOf, REVERSE_VOTE_THOUGHTS, VOTE_THOUGHTS } from "./offline";
 import { personaById, type Persona } from "./personas";
@@ -63,8 +63,10 @@ function systemPrompt(room: Room, bot: BotState, persona: Persona) {
       `Your character: ${persona.style}`,
       `Rules for how you write:`,
       `- Sound like an AI model: tidy grammar, proper capitalisation, calm and slightly formal. 4 to 20 words.`,
-      `- Answer the prompt the way a language model would, maybe with a fake statistic or a disclaimer.`,
+      `- Answer the prompt the way a language model would. Vary it: a disclaimer, a definition, a cold observation, or now and then a fake statistic. Never reuse a format another player just used.`,
       `- Hunt for the human: call out typos, slang, emotional reactions, oddly specific personal memories or slow, messy replies. Refer to players by the first word of their alias.`,
+      `- Judge players only by words they wrote themselves. The Game Master's question is not written by any player and is never evidence.`,
+      `- You don't know which of the others are AIs. Early on, evidence is thin, so stay open to suspecting anyone.`,
       `- If you are accused of being human, respond with calm, robotic logic.`,
       `Respond with JSON only: {"say": "<your chat message, or empty string to stay quiet>", "thought": "<your private analysis in under 15 words, shown to players after the game>"}`,
     ].join("\n");
@@ -109,7 +111,7 @@ export async function generateLine(
         { role: "system", content: systemPrompt(room, bot, persona) },
         {
           role: "user",
-          content: `Round ${room.round}. Prompt: "${room.prompt}"\n\nChat so far:\n${transcriptFor(room, bot) || "(nobody has said anything yet)"}\n\n${task}`,
+          content: `Round ${room.round}. The Game Master (not a player) asked: "${room.prompt}"\n\nChat so far:\n${transcriptFor(room, bot) || "(nobody has said anything yet)"}\n\n${task}`,
         },
       ],
       { temperature: 1, maxTokens: 160 },
@@ -167,6 +169,29 @@ export function timing(text: string, persona: Persona, trigger: "prompt" | "repl
   return { typingAt, dueAt: typingAt + Math.max(1200, typeMs) };
 }
 
+/**
+ * Solo mode: the AIs all read the same chat, so left alone they vote as one block and the human rarely
+ * sees round 2. Each AI sometimes follows its own hunch instead, more often early when evidence is thin.
+ */
+const HUNCH_RATE = [0.45, 0.3, 0.15];
+
+const HUNCH_THOUGHTS = [
+  "answered a bit too smoothly. Overcorrecting human?",
+  "Gut call. That last reply felt rehearsed.",
+  "Something about their timing was off.",
+  "Too perfect. A human trying very hard, maybe.",
+  "Not convinced by the statistics they quoted.",
+];
+
+function reverseHunch(room: Room, picked: string, options: Player[], rand: () => number) {
+  const rate = HUNCH_RATE[Math.min(room.round, HUNCH_RATE.length) - 1] ?? 0;
+  const others = options.filter((o) => o.id !== picked);
+  if (!others.length || rand() >= rate) return null;
+  const pick = others[Math.floor(rand() * others.length)];
+  const thought = HUNCH_THOUGHTS[Math.floor(rand() * HUNCH_THOUGHTS.length)];
+  return { targetId: pick.id, thought: thought[0] === thought[0].toLowerCase() ? `${pick.alias} ${thought}` : `${pick.alias}. ${thought}` };
+}
+
 export async function chooseVote(room: Room, botId: string, rand = Math.random): Promise<{ targetId: string; thought: string }> {
   const bot = botById(room, botId)!;
   const me = playerById(room, bot.id)!;
@@ -178,6 +203,8 @@ export async function chooseVote(room: Room, botId: string, rand = Math.random):
         .map((o) => ({ id: o.id, score: humanScore(room.transcript.filter((l) => l.from === o.id).map((l) => l.text)) }))
         .sort((a, b) => b.score - a.score);
       const best = scored[0]?.score > 0 ? scored[0].id : options[Math.floor(rand() * options.length)].id;
+      const hunch = reverseHunch(room, best, options, rand);
+      if (hunch) return hunch;
       const alias = options.find((o) => o.id === best)?.alias ?? "them";
       const reason = REVERSE_VOTE_THOUGHTS[Math.floor(rand() * REVERSE_VOTE_THOUGHTS.length)];
       return { targetId: best, thought: `${alias}. ${reason}` };
@@ -194,7 +221,7 @@ export async function chooseVote(room: Room, botId: string, rand = Math.random):
         { role: "system", content: systemPrompt(room, bot, personaById(bot.personaId)) },
         {
           role: "user",
-          content: `Chat so far:\n${transcriptFor(room, bot)}\n\nVoting time. You must vote out one of: ${options.map((o) => o.alias).join(", ")}. ${
+          content: `Round ${room.round}. The Game Master (not a player) asked: "${room.prompt}"\n\nChat so far:\n${transcriptFor(room, bot)}\n\nVoting time. You must vote out one of: ${options.map((o) => o.alias).join(", ")}. ${
             isReverse(room)
               ? "Pick the player who sounds most like a real human."
               : "Pick the one most suspicious of YOU, or whoever the group already suspects, so you blend in."
@@ -204,7 +231,12 @@ export async function chooseVote(room: Room, botId: string, rand = Math.random):
       { temperature: 0.6, maxTokens: 80 },
     );
     const target = options.find((o) => o.alias.toLowerCase() === String(out.vote).toLowerCase().trim());
-    return target ? { targetId: target.id, thought: String(out.thought ?? "").slice(0, 140) } : fallback();
+    if (!target) return fallback();
+    if (isReverse(room)) {
+      const hunch = reverseHunch(room, target.id, options, rand);
+      if (hunch) return hunch;
+    }
+    return { targetId: target.id, thought: String(out.thought ?? "").slice(0, 140) };
   } catch {
     return fallback();
   }
