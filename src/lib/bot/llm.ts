@@ -17,22 +17,31 @@ interface Opts {
   timeoutMs?: number;
 }
 
+// Fastest first. Groq retires models now and then, so a missing model falls through to the next one.
+const GROQ_MODELS = process.env.GROQ_MODEL ? [process.env.GROQ_MODEL] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+
 async function groq(messages: ChatMsg[], o: Opts) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("groq: no key");
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
-      messages,
-      temperature: o.temperature ?? 0.9,
-      max_tokens: o.maxTokens ?? 200,
-      response_format: { type: "json_object" },
-    }),
-    signal: AbortSignal.timeout(o.timeoutMs ?? 7000),
-  });
-  if (!res.ok) throw new Error(`groq: HTTP ${res.status}`);
+  let res: Response | undefined;
+  for (const model of GROQ_MODELS) {
+    res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: o.temperature ?? 0.9,
+        max_tokens: o.maxTokens ?? 200,
+        response_format: { type: "json_object" },
+        // gpt-oss thinks before answering; keep that short so replies stay at human speed.
+        ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+      }),
+      signal: AbortSignal.timeout(o.timeoutMs ?? 7000),
+    });
+    if (res.status !== 404 && res.status !== 400) break;
+  }
+  if (!res?.ok) throw new Error(`groq: HTTP ${res?.status}`);
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const text = json.choices?.[0]?.message?.content;
   if (!text) throw new Error("groq: empty");
