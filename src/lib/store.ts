@@ -153,10 +153,11 @@ function redisKV(redis: Redis): KV {
   };
 }
 
-export const kv: KV =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? redisKV(Redis.fromEnv())
-    : memoryKV();
+// Upstash's own names, or the KV_* names the Vercel Marketplace integration injects.
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+
+export const kv: KV = REDIS_URL && REDIS_TOKEN ? redisKV(new Redis({ url: REDIS_URL, token: REDIS_TOKEN })) : memoryKV();
 
 /** True when `key` has been hit more than `limit` times in the current window. */
 export async function limited(key: string, limit: number, windowSeconds: number) {
