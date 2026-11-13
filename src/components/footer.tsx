@@ -20,6 +20,7 @@ export function Footer() {
           <a href={ANDROID_APK_URL} className="hover:text-text">
             Android app
           </a>
+          <Link href="/privacy" className="hover:text-text">Privacy</Link>
         </nav>
       </div>
     </footer>
