@@ -163,7 +163,8 @@ export async function generateLine(
         { role: "system", content: systemPrompt(room, bot, persona) },
         {
           role: "user",
-          content: `Round ${room.round}. The Game Master (not a player) asked: "${room.prompt}"\n\nChat so far:\n${transcriptFor(room, bot) || "(nobody has said anything yet)"}\n\n${task}`,
+          // Interrogation has no round question: the detective asks its own.
+          content: `${isInterrogation(room) ? "Interrogation in progress." : `Round ${room.round}. The Game Master (not a player) asked: "${room.prompt}"`}\n\nChat so far:\n${transcriptFor(room, bot) || "(nobody has said anything yet)"}\n\n${task}`,
         },
       ],
       { temperature: 1, maxTokens: 160 },
