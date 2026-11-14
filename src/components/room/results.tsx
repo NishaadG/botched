@@ -92,7 +92,7 @@ export function Results({
         >
           <div className="scanbar" />
           <p className="text-xs uppercase tracking-[0.3em] text-muted">
-            {">"} game over · {solo ? `${mode?.label} solo` : `${view.round} rounds`}
+            {">"} game over · {solo ? `${mode?.label} solo` : `${view.round} round${view.round === 1 ? "" : "s"}`}
           </p>
           <h1 className={`crt glow mt-3 text-6xl leading-[0.85] md:text-7xl ${humansWon ? "text-brand" : "text-hot"}`}>{headline(view)}</h1>
           <p className="mt-3 text-sm text-muted">{solo ? TAGLINE.solo : TAGLINE.classic}</p>
