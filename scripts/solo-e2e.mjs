@@ -87,7 +87,7 @@ if (VARIANT === "interrogation") {
       await box.fill(robotic[(round + 1) % robotic.length]);
       await page.locator("form button").click().catch(() => {});
     }
-    const over = await page.getByText("Who is the human?").or(page.getByText("Game over")).first().waitFor({ timeout: 120000 })
+    const over = await page.locator(".absolute.inset-x-0 button").first().or(page.getByText("Game over")).first().waitFor({ timeout: 120000 })
       .then(async () => (await page.innerText("body")).toLowerCase().includes("game over"));
     if (over) break;
     if (round === 1) await shot("4-vote");

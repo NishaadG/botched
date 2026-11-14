@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       {
         mode,
         variant: mode === "reverse" && isSoloVariant(variant) ? variant : undefined,
-        fast: params.get("fast") === "1",
+        fast: params.get("fast") === "demo" ? "demo" : params.get("fast") === "1",
         test: await isTestClient(),
       },
     );

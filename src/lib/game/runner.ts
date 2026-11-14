@@ -8,7 +8,7 @@ import { kv } from "../store";
 import { dayKey, emptyRecord, type PlayerRecord } from "../stats";
 import { createGroupChannel } from "../nexconn-server";
 import { createRoom } from "./engine";
-import { FAST_TIMERS, type SoloVariant } from "./modes";
+import { DEMO_TIMERS, FAST_TIMERS, type SoloVariant } from "./modes";
 import { addMessage, alive, botById, botCount, castVerdict, castVote, GameError, isInterrogation, submitAnswer } from "./engine";
 import type { Effect, Room } from "./types";
 
@@ -34,7 +34,7 @@ export function newRoomCode() {
 /** Creates a room with its Nexconn group channel. Throws if the chat room can't be opened. */
 export async function openRoom(
   host: { id: string; name: string },
-  opts: { mode: "classic" | "reverse"; variant?: SoloVariant; fast?: boolean; test?: boolean; matchmade?: boolean },
+  opts: { mode: "classic" | "reverse"; variant?: SoloVariant; fast?: boolean | "demo"; test?: boolean; matchmade?: boolean },
 ) {
   let code = newRoomCode();
   for (let i = 0; i < 5 && (await loadRoom(code)); i++) code = newRoomCode();
@@ -42,7 +42,8 @@ export async function openRoom(
   // Short timers for automated end-to-end tests: always in development, in production only when explicitly allowed.
   const fastAllowed = process.env.NODE_ENV !== "production" || process.env.ALLOW_FAST_ROOMS === "1";
   if (opts.fast && fastAllowed) {
-    room.settings = room.variant === "interrogation" ? { ...FAST_TIMERS, answerSeconds: 0, chatSeconds: 40 } : { ...FAST_TIMERS };
+    const base = opts.fast === "demo" ? DEMO_TIMERS : FAST_TIMERS;
+    room.settings = room.variant === "interrogation" ? { ...base, answerSeconds: 0, chatSeconds: 40 } : { ...base };
   }
   if (opts.test) room.test = true;
   if (opts.matchmade) room.matchmade = true;

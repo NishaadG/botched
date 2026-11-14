@@ -19,6 +19,8 @@ export const TAGLINE = {
 export const CLASSIC_TIMERS: Timers = { answerSeconds: 40, chatSeconds: 60, voteSeconds: 30, revealSeconds: 7 };
 /** Short timers for automated end-to-end tests. */
 export const FAST_TIMERS: Timers = { answerSeconds: 12, chatSeconds: 20, voteSeconds: 12, revealSeconds: 4 };
+/** Recording the demo video: long enough to type on camera, short enough to keep the video tight. */
+export const DEMO_TIMERS: Timers = { answerSeconds: 35, chatSeconds: 32, voteSeconds: 15, revealSeconds: 5 };
 
 export interface SoloMode {
   id: SoloVariant;

@@ -87,7 +87,7 @@ for (let round = 1; round <= 5; round++) {
     await host.page.locator('input[aria-label="Your answer"]:enabled').or(host.page.getByText("Game over")).first().waitFor({ timeout: 60000 }).catch(() => {});
     await answerAll(round);
   }
-  const over = await host.page.getByText("Who is the bot?").or(host.page.getByText("Game over")).first().waitFor({ timeout: 150000 }).then(
+  const over = await host.page.locator(".absolute.inset-x-0 button").first().or(host.page.getByText("Game over")).first().waitFor({ timeout: 150000 }).then(
     async () => (await host.page.innerText("body")).toLowerCase().includes("game over"),
   );
   if (over) break;
