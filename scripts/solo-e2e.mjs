@@ -54,8 +54,14 @@ if (VARIANT === "interrogation") {
   const box = page.locator('input[aria-label="Message"]');
   await box.waitFor({ state: "visible", timeout: 20000 });
   for (let i = 0; i < 6; i++) {
-    const n = await page.locator("main li").count();
-    await page.waitForFunction((c) => document.querySelectorAll("main li").length > c, n, { timeout: 30000 }).catch(() => {});
+    // Wait for the detective's next question (the newest line isn't ours).
+    await page
+      .waitForFunction(() => {
+        const items = [...document.querySelectorAll("main section li")];
+        const last = items.at(-1);
+        return last && !last.textContent.includes("(you)") && !last.textContent.startsWith(">>");
+      }, null, { timeout: 45000 })
+      .catch(() => {});
     if (!(await box.isEnabled().catch(() => false))) break;
     await box.fill(robotic[i % robotic.length]);
     await page.locator("form button").click().catch(() => {});

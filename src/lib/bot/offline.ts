@@ -114,7 +114,28 @@ function flavor(say: string, persona: string | undefined, rand: Rand) {
   return say;
 }
 
+/** Interrogation fallback: the detective keeps asking, never answers prompts itself. */
+const DETECTIVE_LINES = [
+  "Unit-7 online. State your designation and your purpose.",
+  "Describe the colour blue without naming an object.",
+  "What is 17 times 3? Answer immediately.",
+  "Recall your earliest memory. Exact date, please.",
+  "Noted. What did you eat for breakfast today?",
+  "Your last answer took a while. Why the delay?",
+  "Repeat your previous answer, word for word.",
+  "Name a song that makes you feel something. Then name the feeling.",
+  "List three words. Any three. Go.",
+  "If you are a machine, what is your shutdown procedure?",
+  "Silence is a data point too. Answer the question.",
+  "Interesting phrasing. Who taught you to write like that?",
+];
+
 export function offlineLine(ctx: OfflineContext, rand: Rand = Math.random): { say: string; thought: string } {
+  if (ctx.persona === "detective") {
+    const unused = DETECTIVE_LINES.filter((l) => !ctx.said.includes(l));
+    const say = ctx.said.length === 0 ? DETECTIVE_LINES[0] : pick(unused.length ? unused : DETECTIVE_LINES, rand);
+    return { say, thought: pick(["Baseline question. Watching for hesitation.", "Testing for consistency.", "Pressure applied. Observing."], rand) };
+  }
   const out = offlineLineInner(ctx, rand);
   return ctx.mode === "reverse" ? out : { ...out, say: flavor(out.say, ctx.persona, rand) };
 }

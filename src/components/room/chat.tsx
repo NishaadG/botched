@@ -127,6 +127,7 @@ export function ChatPanel({
   gmId,
   meId,
   typing,
+  chatReady,
   onSend,
   onAnswer,
   onTyping,
@@ -137,6 +138,7 @@ export function ChatPanel({
   gmId: string;
   meId: string;
   typing: Record<string, number>;
+  chatReady: boolean;
   onSend: (text: string) => Promise<void>;
   onAnswer: (text: string) => Promise<unknown>;
   onTyping: () => void;
@@ -153,7 +155,8 @@ export function ChatPanel({
   const phase = view.phase;
   const answering = phase === "answer" && alive;
   const answered = Boolean(view.yourAnswer);
-  const canType = alive && (phase === "chat" || (answering && !answered));
+  // Answers go through the game server; chat messages need the live connection.
+  const canType = alive && ((phase === "chat" && chatReady) || (answering && !answered));
   const reverse = view.mode === "reverse";
   const interrogation = view.variant === "interrogation";
   const aliveCount = view.players.filter((p) => p.alive).length;
@@ -185,6 +188,8 @@ export function ChatPanel({
 
   const placeholder = !alive
     ? "You're out. Watch the rest of the game."
+    : phase === "chat" && !chatReady
+      ? "Reconnecting to chat…"
     : phase === "answer"
       ? answered
         ? "Answer locked. Waiting for the others…"

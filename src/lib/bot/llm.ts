@@ -17,35 +17,44 @@ interface Opts {
   timeoutMs?: number;
 }
 
-// Fastest first. Groq retires models now and then, so a missing model falls through to the next one.
-const GROQ_MODELS = process.env.GROQ_MODEL ? [process.env.GROQ_MODEL] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+// Best first. Each model has its own free-tier token budget, and Groq retires models now and then.
+const GROQ_MODELS = process.env.GROQ_MODEL ? [process.env.GROQ_MODEL] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"];
 
+async function groqModel(model: string, key: string, messages: ChatMsg[], o: Opts) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: o.temperature ?? 0.9,
+      max_tokens: o.maxTokens ?? 200,
+      response_format: { type: "json_object" },
+      // gpt-oss thinks before answering; keep that short so replies stay at human speed.
+      ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+    }),
+    signal: AbortSignal.timeout(o.timeoutMs ?? 7000),
+  });
+  if (!res.ok) throw new Error(`${model}: HTTP ${res.status}`);
+  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  const text = json.choices?.[0]?.message?.content;
+  if (!text) throw new Error(`${model}: empty`);
+  return text;
+}
+
+/** Each model has its own rate limits, so any failure (retired, rate-limited, slow) moves on to the next. */
 async function groq(messages: ChatMsg[], o: Opts) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("groq: no key");
-  let res: Response | undefined;
+  const errors: string[] = [];
   for (const model of GROQ_MODELS) {
-    res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: o.temperature ?? 0.9,
-        max_tokens: o.maxTokens ?? 200,
-        response_format: { type: "json_object" },
-        // gpt-oss thinks before answering; keep that short so replies stay at human speed.
-        ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
-      }),
-      signal: AbortSignal.timeout(o.timeoutMs ?? 7000),
-    });
-    if (res.status !== 404 && res.status !== 400) break;
+    try {
+      return await groqModel(model, key, messages, o);
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
   }
-  if (!res?.ok) throw new Error(`groq: HTTP ${res?.status}`);
-  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  const text = json.choices?.[0]?.message?.content;
-  if (!text) throw new Error("groq: empty");
-  return text;
+  throw new Error(`groq: ${errors.join("; ")}`);
 }
 
 async function gemini(messages: ChatMsg[], o: Opts) {
@@ -85,10 +94,12 @@ export async function completeJSON<T>(messages: ChatMsg[], o: Opts = {}): Promis
       const raw = await provider(messages, o);
       const start = raw.indexOf("{");
       const end = raw.lastIndexOf("}");
+      if (start < 0 || end < start) throw new Error(`${provider.name}: no JSON in reply`);
       return JSON.parse(raw.slice(start, end + 1)) as T;
     } catch (err) {
       errors.push(err instanceof Error ? err.message : String(err));
     }
   }
+  console.warn("[llm] all providers failed:", errors.join(" | "));
   throw new Error(`All LLM providers failed: ${errors.join("; ")}`);
 }

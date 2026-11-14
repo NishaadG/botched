@@ -14,12 +14,15 @@ export function Lobby({
   meId,
   online,
   onStart,
+  chatReady,
 }: {
   view: RoomView;
   isHost: boolean;
   meId: string;
   online: string[] | null;
   onStart: () => Promise<unknown>;
+  /** Starting before the chat connects would make the first messages fail. */
+  chatReady: boolean;
 }) {
   const [link, setLink] = useState("");
   const [qr, setQr] = useState("");
@@ -54,12 +57,12 @@ export function Lobby({
   const autoLeft = autoAt === null ? null : Math.max(0, Math.ceil((autoAt - now) / 1000));
   const firing = useRef(false);
   useEffect(() => {
-    if (autoLeft !== 0 || !canControl || firing.current) return;
+    if (autoLeft !== 0 || !canControl || !chatReady || firing.current) return;
     firing.current = true;
     onStart().catch(() => {
       firing.current = false;
     });
-  }, [autoLeft, canControl, onStart]);
+  }, [autoLeft, canControl, chatReady, onStart]);
 
   useEffect(() => {
     const url = `${window.location.origin}/r/${view.code}`;
@@ -103,6 +106,8 @@ export function Lobby({
 
   const startLabel = busy
     ? "Starting…"
+    : !chatReady
+      ? "Connecting to chat…"
     : solo
       ? interrogation
         ? "Enter the interrogation room"
@@ -214,7 +219,7 @@ export function Lobby({
           ) : canControl ? (
             <button
               className="btn btn-brand w-full text-lg"
-              disabled={!canStart || busy || (view.matchmade && !ready)}
+              disabled={!canStart || busy || !chatReady || (view.matchmade && !ready)}
               onClick={async () => {
                 setBusy(true);
                 setError("");
