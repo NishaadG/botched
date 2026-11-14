@@ -35,11 +35,23 @@ for (const name of NAMES) {
   players.push({ name, page });
 }
 
+
+// Answer phase: everyone locks in a private answer (skips players whose box is closed).
+const ANSWERS = ["slept till 2 then panicked", "maggi at 3am, no regrets", "honestly nothing, it was great", "lost my charger again", "watched reels for 4 hours"];
+async function answerAll(round) {
+  for (const [i, p] of players.entries()) {
+    const box = p.page.locator('input[aria-label="Your answer"]');
+    if (!(await box.isEnabled().catch(() => false))) continue;
+    await box.fill(ANSWERS[(i + round) % ANSWERS.length]);
+    await p.page.locator("form button").click().catch(() => {});
+  }
+}
+
 const [host, ...guests] = players;
 await host.page.goto(`${BASE}/play/whos-the-bot`);
 await host.page.fill("#nick", host.name);
 await host.page.click("text=Continue");
-await host.page.waitForSelector("text=Create a room");
+await host.page.waitForSelector("text=Room for friends");
 const code = await host.page.evaluate(async () => (await (await fetch("/api/rooms?fast=1", { method: "POST" })).json()).code);
 console.log("room", code);
 await host.page.goto(`${BASE}/r/${code}`);
@@ -49,16 +61,20 @@ for (const g of guests) {
   await g.page.fill("#nick", g.name);
   await g.page.click("text=Join the game");
 }
-await host.page.waitForFunction((n) => document.body.innerText.includes(`In the room (${n}/8)`), N, { timeout: 20000 });
+await host.page.waitForFunction((n) => document.body.innerText.toLowerCase().includes(`connected (${n}/8)`), N, { timeout: 20000 });
 await host.page.screenshot({ path: `${OUT}/1-lobby.png` });
 await host.page.click("text=Start the game");
 
-for (const p of players) await p.page.waitForSelector("text=Round 1", { timeout: 20000 });
-console.log("game started");
-await new Promise((r) => setTimeout(r, 2500));
+for (const p of players) await p.page.waitForSelector('input[aria-label="Your answer"]:enabled', { timeout: 20000 });
+console.log("game started: answer phase");
+await host.page.screenshot({ path: `${OUT}/2a-answer.png` });
+await answerAll(1);
+for (const p of players) await p.page.waitForSelector('input[aria-label="Message"]:enabled', { timeout: 40000 });
+console.log("answers revealed, discussion open");
+await new Promise((r) => setTimeout(r, 1500));
 for (const [i, p] of players.entries()) {
   await p.page.fill('input[aria-label="Message"]', LINES[i % LINES.length]);
-  await p.page.click('button[aria-label="Send"]');
+  await p.page.locator("form button").click();
   await new Promise((r) => setTimeout(r, 1500));
 }
 await new Promise((r) => setTimeout(r, 9000));
@@ -67,8 +83,12 @@ await guests[0].page.screenshot({ path: `${OUT}/2b-chat-guest.png` });
 
 // Every round: wait for voting, everyone votes for the first option they see.
 for (let round = 1; round <= 5; round++) {
+  if (round > 1) {
+    await host.page.locator('input[aria-label="Your answer"]:enabled').or(host.page.getByText("Game over")).first().waitFor({ timeout: 60000 }).catch(() => {});
+    await answerAll(round);
+  }
   const over = await host.page.getByText("Who is the bot?").or(host.page.getByText("Game over")).first().waitFor({ timeout: 150000 }).then(
-    async () => (await host.page.innerText("body")).includes("Game over"),
+    async () => (await host.page.innerText("body")).toLowerCase().includes("game over"),
   );
   if (over) break;
   if (round === 1) {
@@ -79,12 +99,12 @@ for (let round = 1; round <= 5; round++) {
     const btn = p.page.locator(".absolute.inset-x-0 button").first();
     if (await btn.count()) await btn.click().catch(() => {});
   }
-  await host.page.getByText("was voted out").or(host.page.getByText("Tie vote")).first().waitFor({ timeout: 40000 }).catch(() => {});
+  await host.page.getByText("Scanning voted-out player").or(host.page.getByText("Nobody leaves")).first().waitFor({ timeout: 40000 }).catch(() => {});
   await host.page.screenshot({ path: `${OUT}/4-reveal-r${round}.png` });
-  const text = await host.page.innerText("body");
-  if (text.includes("Game over")) break;
+  const text = (await host.page.innerText("body")).toLowerCase();
+  if (text.includes("game over")) break;
   await host.page.waitForTimeout(5000);
-  if ((await host.page.innerText("body")).includes("Game over")) break;
+  if ((await host.page.innerText("body")).toLowerCase().includes("game over")) break;
 }
 await host.page.waitForSelector("text=Game over", { timeout: 150000 });
 await host.page.waitForTimeout(1500);
@@ -96,7 +116,7 @@ console.log("result:", (await host.page.innerText("h1")).trim());
 await host.page.click('button[aria-label="Really fun"]');
 await host.page.fill('input[aria-label="Comment"]', "the bot's typos were way too convincing");
 await host.page.click("text=Send");
-await host.page.waitForSelector("text=Thanks!", { timeout: 10000 });
+await host.page.waitForSelector("text=Thanks", { timeout: 10000 });
 console.log("feedback sent");
 // Rematch: one player starts it, the others see a join button and land in the same new room.
 await guests[0].page.waitForSelector("text=Game over", { timeout: 30000 });
@@ -107,7 +127,7 @@ await host.page.goto(`${BASE}/r/${code}`);
 await host.page.waitForSelector("text=Join the rematch", { timeout: 20000 });
 await host.page.click("text=Join the rematch");
 await host.page.waitForURL(`**/r/${next}`, { timeout: 20000 });
-await host.page.waitForFunction(() => document.body.innerText.includes("In the room (2/8)"), null, { timeout: 20000 });
+await host.page.waitForFunction(() => document.body.innerText.toLowerCase().includes("connected (2/8)"), null, { timeout: 20000 });
 console.log("rematch: both players in", next);
 await host.page.goto(`${BASE}/stats`);
 await host.page.waitForSelector("text=Live numbers", { timeout: 10000 });

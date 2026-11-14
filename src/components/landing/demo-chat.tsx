@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { Sigil } from "@/components/sigil";
 
 type Line =
   | { kind: "gm"; text: string }
@@ -10,10 +11,10 @@ type Line =
   | { kind: "reveal"; who: number };
 
 const CAST = [
-  { alias: "Mango Fox", avatar: "🦊", color: "#fb923c" },
-  { alias: "Sky Whale", avatar: "🐳", color: "#38bdf8" },
-  { alias: "Violet Owl", avatar: "🦉", color: "#a78bfa" },
-  { alias: "Lime Frog", avatar: "🐸", color: "#a3e635" },
+  { alias: "Mango Fox", color: "#fb923c" },
+  { alias: "Sky Whale", color: "#38bdf8" },
+  { alias: "Violet Owl", color: "#a78bfa" },
+  { alias: "Lime Frog", color: "#a3e635" },
 ];
 
 const SCRIPT: Line[] = [
@@ -21,9 +22,9 @@ const SCRIPT: Line[] = [
   { kind: "msg", who: 0, text: "slept till 2 and then felt guilty about it till 6" },
   { kind: "msg", who: 1, text: "watched 3 episodes of a show i cant even name now" },
   { kind: "typing", who: 3 },
-  { kind: "msg", who: 3, text: "same as fox lol. sunday is for rotting 🫠" },
+  { kind: "msg", who: 3, text: "same as fox lol. sunday is for rotting" },
   { kind: "msg", who: 2, text: "went for a run. by run i mean walked to the chai place" },
-  { kind: "msg", who: 1, text: "lime frog replied in like 0.5 seconds 👀" },
+  { kind: "msg", who: 1, text: "lime frog replied in like 0.5 seconds" },
   { kind: "typing", who: 3 },
   { kind: "msg", who: 3, text: "bro i just type fast what" },
   { kind: "gm", text: "Time's up. Vote: who is the bot?" },
@@ -57,14 +58,7 @@ export function DemoChat() {
         </div>
         <div className="flex -space-x-2">
           {CAST.map((c) => (
-            <span
-              key={c.alias}
-              className="grid h-7 w-7 place-items-center rounded-full bg-ink text-sm"
-              style={{ boxShadow: `inset 0 0 0 2px ${c.color}` }}
-              aria-hidden
-            >
-              {c.avatar}
-            </span>
+            <Sigil key={c.alias} seed={c.alias} color={c.color} size={28} />
           ))}
         </div>
       </div>
@@ -96,13 +90,11 @@ export function DemoChat() {
                   exit={{ opacity: 0 }}
                   className="mx-auto flex items-center gap-3 rounded-2xl border border-hot/50 bg-hot/15 px-4 py-3"
                 >
-                  <span className="text-2xl" aria-hidden>
-                    {c.avatar}
-                  </span>
+                  <Sigil seed={c.alias} color={c.color} size={40} />
                   <span>
                     <b style={{ color: c.color }}>{c.alias}</b> was voted out.
                     <br />
-                    <span className="font-display text-lg font-extrabold text-hot">It was the bot. 🤖</span>
+                    <span className="font-display text-lg font-extrabold text-hot">It was the bot.</span>
                   </span>
                 </motion.li>
               );
@@ -115,13 +107,7 @@ export function DemoChat() {
                 exit={{ opacity: 0 }}
                 className="flex items-end gap-2"
               >
-                <span
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm"
-                  style={{ background: `${c.color}22`, boxShadow: `inset 0 0 0 2px ${c.color}` }}
-                  aria-hidden
-                >
-                  {c.avatar}
-                </span>
+                <Sigil seed={c.alias} color={c.color} size={28} />
                 <div className="flex flex-col">
                   <span className="px-1 text-[11px] font-semibold" style={{ color: c.color }}>
                     {c.alias}

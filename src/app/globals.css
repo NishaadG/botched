@@ -164,3 +164,146 @@ body {
     padding-bottom: calc(3.6rem + env(safe-area-inset-bottom));
   }
 }
+
+/* ---------- Who's the Bot: terminal / CRT theme ----------
+   Scoped to .term so the hub keeps its own look. Every colour utility reads these variables. */
+.term {
+  --color-ink: #030703;
+  --color-panel: #071108;
+  --color-panel-2: #0b1a0d;
+  --color-line: #18361c;
+  --color-muted: #5d9466;
+  --color-text: #c6f7cc;
+  --color-brand: #3dff72;
+  --color-brand-ink: #011a06;
+  --color-hot: #ff4a3d;
+  --color-cool: #5ce8ff;
+  --color-warn: #ffc23d;
+  --font-display: var(--font-crt), var(--font-mono-face), ui-monospace, monospace;
+  --font-sans: var(--font-mono-face), ui-monospace, monospace;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgb(61 255 114 / 0.09), transparent 60%),
+    radial-gradient(ellipse at 50% 120%, rgb(61 255 114 / 0.05), transparent 60%),
+    var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-mono-face), ui-monospace, monospace;
+}
+/* Scanlines and a soft vignette over everything; never blocks clicks. */
+.term::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background:
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / 0) 0 2px, rgb(0 0 0 / 0.22) 2px 3px),
+    radial-gradient(ellipse at center, transparent 60%, rgb(0 0 0 / 0.45));
+  mix-blend-mode: multiply;
+}
+.term .card {
+  background: linear-gradient(180deg, rgb(61 255 114 / 0.035), transparent 40%), var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgb(61 255 114 / 0.04) inset,
+    0 0 40px -20px rgb(61 255 114 / 0.35);
+}
+.term .btn {
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.9em;
+}
+.term .btn-brand {
+  box-shadow:
+    0 0 0 1px rgb(61 255 114 / 0.5),
+    0 0 24px -6px rgb(61 255 114 / 0.7);
+}
+.term .btn-ghost {
+  background: transparent;
+}
+.term .btn-ghost:hover {
+  background: rgb(61 255 114 / 0.08);
+}
+.term .input {
+  border-radius: 3px;
+  caret-color: var(--color-brand);
+  font-family: var(--font-mono-face), ui-monospace, monospace;
+}
+.term .input:focus {
+  box-shadow: 0 0 0 3px rgb(61 255 114 / 0.15);
+}
+.term .input::placeholder {
+  color: var(--color-muted);
+  opacity: 0.8;
+}
+.glow {
+  text-shadow:
+    0 0 6px currentColor,
+    0 0 18px color-mix(in srgb, currentColor 45%, transparent);
+}
+.crt {
+  font-family: var(--font-crt), ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+@keyframes cursor {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.cursor::after {
+  content: "";
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 0.15em;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: cursor 1.05s steps(1) infinite;
+}
+@keyframes scan {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+.scanbar {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.scanbar::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 40%;
+  background: linear-gradient(to bottom, transparent, rgb(61 255 114 / 0.07), transparent);
+  animation: scan 3.2s linear infinite;
+}
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.82;
+  }
+  94% {
+    opacity: 1;
+  }
+}
+.term-flicker {
+  animation: flicker 6s infinite;
+}

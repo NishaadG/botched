@@ -62,25 +62,21 @@ export const NEXT_GAMES = [
     id: "two-truths",
     title: "Two Truths & a Bot",
     blurb: "Everyone posts two true facts about themselves. The AI slips a fake one into somebody's set. Find the forgery.",
-    emoji: "🕵️",
   },
   {
     id: "emoji-heist",
     title: "Emoji Heist",
     blurb: "Describe a movie in emoji only. The AI is the fastest guesser in the room, so beat it to the answer.",
-    emoji: "🎬",
   },
   {
     id: "impostor-prompt",
     title: "Off Script",
     blurb: "Everyone gets the same secret word except one human. Chat around it without giving it away.",
-    emoji: "🤫",
   },
   {
     id: "roast-court",
     title: "Roast Court",
     blurb: "Pitch a terrible startup. An AI judge grills you live in the chat and the room votes on the verdict.",
-    emoji: "⚖️",
   },
 ] as const;
 

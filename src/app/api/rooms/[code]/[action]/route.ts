@@ -1,4 +1,4 @@
-import { addMessage, castVote, GameError, join, leave, start, tick, tickDue, viewFor } from "@/lib/game/engine";
+import { addMessage, castVote, GameError, join, leave, start, submitAnswer, tick, tickDue, viewFor } from "@/lib/game/engine";
 import { loadRoom, markSeen, mutate, newBots, onlineIn } from "@/lib/game/runner";
 import { joinGroupChannel } from "@/lib/nexconn-server";
 import { getSession } from "@/lib/session";
@@ -27,11 +27,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/rooms/[code
         const online = current ? new Set(await onlineIn(current)) : new Set<string>();
         online.add(me.id);
         room = await mutate(code, (r, now) => {
-          if (r.phase !== "lobby") return start(r, me.id, newBots(r.mode ?? "classic"), now);
+          if (r.phase !== "lobby") return start(r, me.id, newBots(r), now);
           // Drop players whose lobby tab is gone; if the host left, whoever presses start becomes host.
           r.players = r.players.filter((p) => online.has(p.id));
           if (!online.has(r.hostId)) r.hostId = me.id;
-          return start(r, me.id, newBots(r.mode ?? "classic"), now);
+          return start(r, me.id, newBots(r), now);
         });
         break;
       }
@@ -39,6 +39,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/rooms/[code
         const text = String(body.text ?? "").trim();
         if (!text || !body.id) return Response.json({ error: "Empty message." }, { status: 400 });
         room = await mutate(code, (r, now) => addMessage(r, { id: String(body.id), from: me.id, text, at: now }, now));
+        break;
+      }
+      case "answer": {
+        const text = String(body.text ?? "").trim();
+        if (!text) return Response.json({ error: "Write an answer first." }, { status: 400 });
+        room = await mutate(code, (r, now) => submitAnswer(r, me.id, text, now));
         break;
       }
       case "vote":

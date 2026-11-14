@@ -1,13 +1,16 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { after } from "next/server";
-import { chooseVote, generateLine, shouldReply, timing } from "../bot/brain";
-import { AI_PERSONAS, personaById, PERSONAS } from "../bot/personas";
+import { chooseVerdict, chooseVote, generateAnswer, generateLine, shouldReply, timing } from "../bot/brain";
+import { AI_PERSONAS, DETECTIVE, personaById, PERSONAS } from "../bot/personas";
 import { sendGroupEvent, sendGroupText } from "../nexconn-server";
 import { kv } from "../store";
 import { dayKey, emptyRecord, type PlayerRecord } from "../stats";
-import { addMessage, alive, botById, castVote, GameError } from "./engine";
-import { BOT_COUNT, type Effect, type Mode, type Room } from "./types";
+import { createGroupChannel } from "../nexconn-server";
+import { createRoom } from "./engine";
+import { FAST_TIMERS, type SoloVariant } from "./modes";
+import { addMessage, alive, botById, botCount, castVerdict, castVote, GameError, isInterrogation, submitAnswer } from "./engine";
+import type { Effect, Room } from "./types";
 
 import { GM_ID } from "../constants";
 export { GM_ID };
@@ -28,10 +31,33 @@ export function newRoomCode() {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
+/** Creates a room with its Nexconn group channel. Throws if the chat room can't be opened. */
+export async function openRoom(
+  host: { id: string; name: string },
+  opts: { mode: "classic" | "reverse"; variant?: SoloVariant; fast?: boolean; test?: boolean; matchmade?: boolean },
+) {
+  let code = newRoomCode();
+  for (let i = 0; i < 5 && (await loadRoom(code)); i++) code = newRoomCode();
+  const room = createRoom(code, host, Date.now(), opts.mode, opts.variant);
+  // Short timers for automated end-to-end tests: always in development, in production only when explicitly allowed.
+  const fastAllowed = process.env.NODE_ENV !== "production" || process.env.ALLOW_FAST_ROOMS === "1";
+  if (opts.fast && fastAllowed) {
+    room.settings = room.variant === "interrogation" ? { ...FAST_TIMERS, answerSeconds: 0, chatSeconds: 40 } : { ...FAST_TIMERS };
+  }
+  if (opts.test) room.test = true;
+  if (opts.matchmade) room.matchmade = true;
+  const title = `${opts.mode === "reverse" ? "Who's the Human" : "Who's the Bot"} · ${code}`;
+  await createGroupChannel(room.channelId, host.id, title, [host.id]);
+  await saveRoom(room);
+  return room;
+}
+
 /** Fresh AI players for a game. Ids look exactly like human ids, so nothing gives them away. */
-export function newBots(mode: Mode) {
-  const pool = [...(mode === "reverse" ? AI_PERSONAS : PERSONAS)].sort(() => Math.random() - 0.5);
-  return Array.from({ length: BOT_COUNT[mode] }, (_, i) => ({
+export function newBots(room: Room) {
+  const pool = isInterrogation(room)
+    ? [DETECTIVE]
+    : [...(room.mode === "reverse" ? AI_PERSONAS : PERSONAS)].sort(() => Math.random() - 0.5);
+  return Array.from({ length: botCount(room) }, (_, i) => ({
     id: "p_" + randomBytes(6).toString("base64url").replace(/[-_]/g, "x").toLowerCase(),
     personaId: pool[i % pool.length].id,
   }));
@@ -86,6 +112,13 @@ async function perform(room: Room, effects: Effect[]) {
       if (e.type === "gm") await sendGroupText(room.channelId, GM_ID, e.text);
       else if (e.type === "event") await sendGroupEvent(room.channelId, GM_ID, { ...e.event, v: room.version });
       else if (e.type === "botSay") await sendGroupText(room.channelId, e.botId, e.text);
+      else if (e.type === "answers") {
+        // Each answer goes into the chat as its author, tagged so clients show it as an answer card.
+        for (const it of e.items) await sendGroupText(room.channelId, it.from, it.text, { answer: e.round });
+      } else if (e.type === "botAnswers") {
+        const pending = alive(room).filter((p) => p.isBot && !room.answers?.[p.id]);
+        pending.forEach((p, i) => after(() => delay(i * 400).then(() => botAnswer(room.code, p.id))));
+      } else if (e.type === "botVerdict") after(() => botVerdict(room.code));
       else if (e.type === "botTyping") await sendGroupEvent(room.channelId, e.botId, { kind: "typing" }, false);
       else if (e.type === "planBot") {
         const ids = e.botId ? [e.botId] : room.bots.map((b) => b.id);
@@ -126,6 +159,36 @@ async function planBot(code: string, botId: string, trigger: "prompt" | "reply" 
   });
 }
 
+async function botAnswer(code: string, botId: string) {
+  const room = await loadRoom(code);
+  if (!room || room.phase !== "answer" || room.answers?.[botId]) return;
+  const line = await generateAnswer(room, botId);
+  await mutate(code, (r, now) => {
+    const bot = botById(r, botId);
+    if (!bot || r.phase !== "answer" || r.round !== room.round || r.answers?.[botId]) return [];
+    if (line.thought) bot.thoughts.push({ at: now, round: r.round, text: `Answer: ${line.thought}` });
+    try {
+      return submitAnswer(r, botId, line.say, now);
+    } catch {
+      return [];
+    }
+  });
+}
+
+async function botVerdict(code: string) {
+  const room = await loadRoom(code);
+  if (!room || room.phase !== "vote" || !isInterrogation(room)) return;
+  const { human, thought } = await chooseVerdict(room);
+  // A beat of suspense before the ruling.
+  await delay(2500);
+  await mutate(code, (r, now) => {
+    const bot = r.bots[0];
+    if (r.phase !== "vote" || !bot) return [];
+    if (thought) bot.thoughts.push({ at: now, round: r.round, text: `Verdict: ${thought}` });
+    return castVerdict(r, human, now);
+  });
+}
+
 async function botVote(code: string, botId: string) {
   const room = await loadRoom(code);
   if (!room || room.phase !== "vote" || !botById(room, botId)) return;
@@ -154,7 +217,7 @@ async function recordStats(code: string) {
     const solo = room.mode === "reverse";
     const final = room.eliminations.at(-1);
     const humans = room.players.filter((x) => !x.isBot);
-    const botAlias = solo ? "3 AIs (solo)" : room.players.find((x) => x.isBot)?.alias ?? "";
+    const botAlias = solo ? `${room.bots.length} AI${room.bots.length > 1 ? "s" : ""} (solo ${room.variant ?? "classic"})` : room.players.find((x) => x.isBot)?.alias ?? "";
     await kv.incr("stats:games");
     if (solo) await kv.incr(humansWon ? "stats:soloSurvived" : "stats:soloCaught");
     else await kv.incr(humansWon ? "stats:humanWins" : "stats:botWins");

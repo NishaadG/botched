@@ -1,9 +1,12 @@
-// One player plays "Who's the Human" alone against three AIs, start to finish.
-// Usage: node scripts/solo-e2e.mjs [baseUrl]   (server with ALLOW_FAST_ROOMS=1 for short rounds)
+// One player plays a solo mode ("Who's the Human") start to finish.
+// Usage: node scripts/solo-e2e.mjs [baseUrl] [variant]
+//   variant: classic | blitz | crowd | hard | interrogation | oneclick (the landing page's "Play solo now" flow)
+//   Run the server with ALLOW_FAST_ROOMS=1 for short rounds (not used by "oneclick").
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 
 const BASE = process.argv[2] ?? "http://localhost:3210";
+const VARIANT = process.argv[3] ?? "classic";
 const OUT = process.env.E2E_OUT ?? "e2e-shots";
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? "chrome" });
@@ -12,47 +15,88 @@ await ctx.addCookies([{ name: "botched_test", value: "1", url: BASE }]); // keep
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
+page.on("crash", async () => console.log("CRASH at", new Date().toISOString()));
 page.on("console", (m) => m.type() === "error" && errors.push(`console: ${m.text()}`));
+const shot = (name) => page.screenshot({ path: `${OUT}/solo-${VARIANT}-${name}.png` });
 
-// The landing page's "Play solo now" button: a nickname, then straight into a solo room.
-await page.goto(`${BASE}/play/whos-the-bot?solo=1`);
-await page.fill("#nick", "Solo");
-await page.click("text=Play solo vs 3 AIs");
-await page.waitForURL(/\/r\/[A-Z]+$/, { timeout: 20000 });
+if (VARIANT === "oneclick") {
+  await page.goto(`${BASE}/play/whos-the-bot?solo=1`);
+  await page.fill("#nick", "Solo");
+  await page.click("text=Play solo vs 3 AIs");
+  await page.waitForURL(/\/r\/[A-Z]+$/, { timeout: 20000 });
+} else {
+  await page.goto(`${BASE}/play/whos-the-bot`);
+  await page.fill("#nick", "Solo");
+  await page.click("text=Continue");
+  await page.waitForSelector("text=Room for friends");
+  await shot("0-start");
+  const code = await page.evaluate(
+    async (v) => (await (await fetch(`/api/rooms?mode=reverse&variant=${v}&fast=1`, { method: "POST" })).json()).code,
+    VARIANT,
+  );
+  await page.goto(`${BASE}/r/${code}`);
+}
 const code = page.url().split("/").pop();
-await page.waitForSelector("text=You vs three AIs");
-await page.screenshot({ path: `${OUT}/solo-1-lobby.png` });
-await page.click("text=Start the solo game");
-await page.waitForSelector("text=Round 1", { timeout: 20000 });
-console.log("solo game", code, "started");
-await page.waitForTimeout(2000);
-await page.fill('input[aria-label="Message"]', "Processing the prompt. My answer: I slept, which is optimal.");
-await page.click('button[aria-label="Send"]');
+await page.waitForSelector("text=AI took your job");
+await shot("1-lobby");
+await page.locator("main button.btn-brand").first().click();
+console.log("solo", VARIANT, code, "started");
 
-const lines = [
-  "Based on my training data, the optimal answer is rest.",
-  "Acknowledged. I process Sundays as low-priority time.",
-  "Statistically, most humans would say the same.",
+const robotic = [
+  "Processing. The optimal answer is rest, at 94 percent confidence.",
+  "Acknowledged. I classify Sundays as low-priority maintenance windows.",
+  "Statistically, that response is consistent with a language model.",
+  "Negative. I do not experience preferences. I report averages.",
 ];
-for (let round = 1; round <= 3; round++) {
-  const over = await page.getByText("Who is the human?", { exact: true }).or(page.getByText("Game over")).first().waitFor({ timeout: 150000 })
-    .then(async () => (await page.innerText("body")).includes("Game over"));
-  if (over) break;
-  if (round === 1) await page.screenshot({ path: `${OUT}/solo-2-vote.png` });
-  await page.locator(".absolute.inset-x-0 button").first().click().catch(() => {});
-  await page.getByText("was voted out").or(page.getByText("Tie vote")).or(page.getByText("tie")).first().waitFor({ timeout: 60000 }).catch(() => {});
-  // Next round, or the AIs already found the human.
-  await page.getByText(`Round ${round + 1}`).or(page.getByText("Game over")).first().waitFor({ timeout: 60000 }).catch(() => {});
-  if ((await page.innerText("body")).includes("Game over")) break;
-  const input = page.locator('input[aria-label="Message"]');
-  if ((await input.count()) && !(await input.isDisabled())) {
-    await input.fill(lines[round % lines.length]);
-    await page.click('button[aria-label="Send"]');
+
+if (VARIANT === "interrogation") {
+  // The detective opens; answer every question it asks until the verdict.
+  const box = page.locator('input[aria-label="Message"]');
+  await box.waitFor({ state: "visible", timeout: 20000 });
+  for (let i = 0; i < 6; i++) {
+    const n = await page.locator("main li").count();
+    await page.waitForFunction((c) => document.querySelectorAll("main li").length > c, n, { timeout: 30000 }).catch(() => {});
+    if (!(await box.isEnabled().catch(() => false))) break;
+    await box.fill(robotic[i % robotic.length]);
+    await page.locator("form button").click().catch(() => {});
+    if (i === 1) await shot("2-questioning");
+  }
+} else {
+  for (let round = 1; round <= 6; round++) {
+    const answer = page.locator('input[aria-label="Your answer"]:enabled');
+    const ready = await answer.or(page.getByText("Game over")).first().waitFor({ timeout: 90000 }).then(() => true).catch(() => false);
+    if (!ready || (await page.innerText("body")).toLowerCase().includes("game over")) break;
+    if (await answer.count()) {
+      await answer.fill(robotic[round % robotic.length]);
+      await page.locator("form button").click();
+      if (round === 1) await shot("2-answer-locked");
+    }
+    const box = page.locator('input[aria-label="Message"]:enabled');
+    await box.waitFor({ timeout: 60000 }).catch(() => {});
+    if (round === 1) {
+      await page.waitForTimeout(4000);
+      await shot("3-answers-revealed");
+    }
+    if (await box.count()) {
+      await box.fill(robotic[(round + 1) % robotic.length]);
+      await page.locator("form button").click().catch(() => {});
+    }
+    const over = await page.getByText("Who is the human?").or(page.getByText("Game over")).first().waitFor({ timeout: 120000 })
+      .then(async () => (await page.innerText("body")).toLowerCase().includes("game over"));
+    if (over) break;
+    if (round === 1) await shot("4-vote");
+    await page.locator(".absolute.inset-x-0 button").first().click().catch(() => {});
+    await page.getByText("Scanning voted-out player").or(page.getByText("Nobody leaves")).first().waitFor({ timeout: 60000 }).catch(() => {});
   }
 }
-await page.waitForSelector("text=Game over", { timeout: 200000 });
+await page.waitForSelector("text=Game over", { timeout: 200000 }).catch(async (e) => {
+  await shot("fail");
+  console.log("BODY:", (await page.innerText("body")).slice(0, 1500));
+  console.log(errors.join(" | "));
+  throw e;
+});
 await page.waitForTimeout(1500);
-await page.screenshot({ path: `${OUT}/solo-3-results.png`, fullPage: true });
+await shot("5-results");
 console.log("result:", (await page.innerText("h1")).trim());
 console.log(errors.length ? `ERRORS:\n${errors.join("\n")}` : "no browser errors");
 await browser.close();

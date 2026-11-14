@@ -1,4 +1,7 @@
-export type Phase = "lobby" | "chat" | "vote" | "reveal" | "over";
+import type { SoloVariant, Timers } from "./modes";
+
+/** answer: everyone answers the prompt privately; chat: open discussion; then the vote. */
+export type Phase = "lobby" | "answer" | "chat" | "vote" | "reveal" | "over";
 
 export interface Player {
   /** Nexconn user id (humans: stable per guest; bot: fresh per game). */
@@ -19,6 +22,8 @@ export interface ChatLine {
   text: string;
   at: number;
   round: number;
+  /** A private answer, revealed with everyone else's when the answer phase ends. */
+  kind?: "answer";
 }
 
 export interface Elimination {
@@ -75,7 +80,17 @@ export interface Room {
   bots: BotState[];
   transcript: ChatLine[];
   seen: string[];
-  settings: { chatSeconds: number; voteSeconds: number; revealSeconds: number };
+  settings: Timers;
+  /** Solo games only: which solo mode. */
+  variant?: SoloVariant;
+  /** This round's private answers, by player id. */
+  answers?: Record<string, string>;
+  /** The AIs have been asked for their answers this round. */
+  answersAsked?: boolean;
+  /** Opened by quick match: strangers can be dropped in. */
+  matchmade?: boolean;
+  /** Interrogation only: what the detective decided. */
+  verdict?: "human" | "ai";
   version: number;
   statsRecorded?: boolean;
   /** Created by an automated test: never counted in stats or shown in feedback. */
@@ -95,6 +110,12 @@ export type Effect =
   /** Without botId, every bot still in the game decides whether to speak. */
   | { type: "planBot"; trigger: "prompt" | "reply" | "nudge"; botId?: string }
   | { type: "botVote" }
+  /** Every AI still in the game writes its private answer, after reading the ones already in. */
+  | { type: "botAnswers" }
+  /** Answers revealed together, each posted into the chat as its author. */
+  | { type: "answers"; items: { from: string; text: string }[]; round: number }
+  /** Interrogation: the detective decides whether the suspect is human. */
+  | { type: "botVerdict" }
   | { type: "gameOver" };
 
 export const MIN_HUMANS: Record<Mode, number> = { classic: 2, reverse: 1 };

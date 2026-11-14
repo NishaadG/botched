@@ -1,16 +1,16 @@
 /** Aliases, colours and round prompts. Everyone (bot included) gets a random alias, so nobody can tell who is who. */
 
 export const ALIASES = [
-  { alias: "Teal Otter", color: "#2dd4bf", avatar: "🦦" },
-  { alias: "Mango Fox", color: "#fb923c", avatar: "🦊" },
-  { alias: "Violet Owl", color: "#a78bfa", avatar: "🦉" },
-  { alias: "Lime Frog", color: "#a3e635", avatar: "🐸" },
-  { alias: "Rose Panda", color: "#f472b6", avatar: "🐼" },
-  { alias: "Sky Whale", color: "#38bdf8", avatar: "🐳" },
-  { alias: "Gold Lion", color: "#facc15", avatar: "🦁" },
-  { alias: "Coral Crab", color: "#f87171", avatar: "🦀" },
-  { alias: "Mint Koala", color: "#6ee7b7", avatar: "🐨" },
-  { alias: "Plum Bat", color: "#c084fc", avatar: "🦇" },
+  { alias: "Teal Otter", color: "#2dd4bf" },
+  { alias: "Mango Fox", color: "#fb923c" },
+  { alias: "Violet Owl", color: "#a78bfa" },
+  { alias: "Lime Frog", color: "#a3e635" },
+  { alias: "Rose Panda", color: "#f472b6" },
+  { alias: "Sky Whale", color: "#38bdf8" },
+  { alias: "Gold Lion", color: "#facc15" },
+  { alias: "Coral Crab", color: "#f87171" },
+  { alias: "Mint Koala", color: "#6ee7b7" },
+  { alias: "Plum Bat", color: "#c084fc" },
 ];
 
 export const PROMPTS = [

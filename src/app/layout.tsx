@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Inter, JetBrains_Mono, VT323 } from "next/font/google";
 import { Pwa } from "@/components/pwa";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"] });
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const mono = JetBrains_Mono({ variable: "--font-mono-face", subsets: ["latin"] });
+/** CRT display face for the game screens. */
+const crt = VT323({ variable: "--font-crt", subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
   title: { default: "Botched · party games in your group chat", template: "%s · Botched" },
@@ -26,7 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${bricolage.variable} ${inter.variable} ${mono.variable} h-full`}>
+    <html lang="en" className={`${bricolage.variable} ${inter.variable} ${mono.variable} ${crt.variable} h-full`}>
       <body className="min-h-full flex flex-col">
         {children}
         <Pwa />

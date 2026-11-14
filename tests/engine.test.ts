@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addMessage, castVote, createRoom, join, start, tick, tickDue, viewFor } from "../src/lib/game/engine";
+import { addMessage, castVote, createRoom, join, start, submitAnswer, tick, tickDue, viewFor } from "../src/lib/game/engine";
+import { answerAll, chatLines } from "./helpers";
 
 const T0 = 1_000_000;
 const seq = (...xs: number[]) => {
@@ -11,7 +12,9 @@ const seq = (...xs: number[]) => {
 function setup(humans = 3) {
   const room = createRoom("ABCDE", { id: "h0", name: "Asha" }, T0);
   for (let i = 1; i < humans; i++) join(room, { id: `h${i}`, name: `P${i}` }, T0);
+  room.settings.chatSeconds = 90;
   start(room, "h0", [{ id: "bot1", personaId: "chill" }], T0, seq(0.3, 0.7, 0.1));
+  answerAll(room, T0);
   return room;
 }
 
@@ -21,7 +24,7 @@ test("only the host can start, and only with enough players", () => {
   join(room, { id: "h1", name: "Kabir" }, T0);
   assert.throws(() => start(room, "h1", [{ id: "b", personaId: "chill" }], T0), /host/);
   start(room, "h0", [{ id: "b", personaId: "chill" }], T0);
-  assert.equal(room.phase, "chat");
+  assert.equal(room.phase, "answer", "every round opens with private answers");
   assert.equal(room.players.length, 3);
 });
 
@@ -44,11 +47,11 @@ test("chat only counts during the chat phase and dedupes by message id", () => {
   const room = setup(3);
   addMessage(room, { id: "m1", from: "h1", text: "hi", at: T0 }, T0);
   addMessage(room, { id: "m1", from: "h1", text: "hi", at: T0 }, T0);
-  assert.equal(room.transcript.length, 1);
+  assert.equal(chatLines(room).length, 1);
   tick(room, T0 + 91_000);
   assert.equal(room.phase, "vote");
   addMessage(room, { id: "m2", from: "h1", text: "late", at: T0 }, T0);
-  assert.equal(room.transcript.length, 1);
+  assert.equal(chatLines(room).length, 1);
 });
 
 test("voting out the bot ends the game with a human win", () => {
@@ -73,7 +76,7 @@ test("a tie eliminates nobody and the next round starts", () => {
   castVote(room, "bot1", "h0", T0);
   assert.equal(room.eliminations[0].playerId, null);
   tick(room, T0 + 200_000);
-  assert.equal(room.phase, "chat");
+  assert.equal(room.phase, "answer");
   assert.equal(room.round, 2);
 });
 
@@ -128,4 +131,39 @@ test("a silent chat gets one nudge from an AI, and not again until it goes quiet
   assert.deepEqual(tick(room, T0 + 40_000), [], "someone spoke recently");
   assert.equal(tick(room, T0 + 49_000).length, 1, "quiet again, nudge again");
   assert.deepEqual(tick(room, T0 + 85_000), [], "too close to the vote");
+});
+
+test("answers stay private until everyone is in, then drop together in the chat", () => {
+  const room = createRoom("ANSWR", { id: "h0", name: "Asha" }, T0);
+  join(room, { id: "h1", name: "Kabir" }, T0);
+  start(room, "h0", [{ id: "bot1", personaId: "chill" }], T0);
+  submitAnswer(room, "h0", "pani puri obviously", T0);
+  const v = viewFor(room, "h1");
+  assert.equal(v.answersIn, 1);
+  assert.equal(v.yourAnswer, null, "you only ever see your own answer");
+  assert.equal(viewFor(room, "h0").yourAnswer, "pani puri obviously");
+  assert.equal(room.transcript.length, 0, "nothing is in the chat yet");
+  const effects = submitAnswer(room, "h1", "vada pav", T0);
+  assert.ok(effects.some((e) => e.type === "botAnswers"), "the AI writes its answer once every human is in");
+  assert.equal(room.phase, "answer", "still waiting for the AI");
+  const reveal = submitAnswer(room, "bot1", "momos with red chutney", T0 + 1500);
+  assert.equal(room.phase, "chat");
+  const posted = reveal.find((e) => e.type === "answers");
+  assert.ok(posted && posted.type === "answers" && posted.items.length === 3);
+  assert.equal(room.transcript.filter((l) => l.kind === "answer").length, 3);
+});
+
+test("an AI that never answers gets a fallback after a short grace period", () => {
+  const room = createRoom("GRACE", { id: "h0", name: "Asha" }, T0);
+  join(room, { id: "h1", name: "Kabir" }, T0);
+  start(room, "h0", [{ id: "bot1", personaId: "chill" }], T0);
+  const end = T0 + room.settings.answerSeconds * 1000;
+  const asked = tick(room, end - 8000);
+  assert.ok(asked.some((e) => e.type === "botAnswers"), "AIs are asked shortly before time runs out");
+  tick(room, end + 1000);
+  assert.equal(room.phase, "answer", "waits a moment for the AI");
+  tick(room, end + 7000);
+  assert.equal(room.phase, "chat");
+  assert.ok(room.answers?.bot1, "the AI got a fallback answer");
+  assert.equal(room.transcript.filter((l) => l.kind === "answer").length, 1, "silent humans are skipped");
 });

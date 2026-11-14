@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import type { RoomView } from "@/lib/game/engine";
+import { handle } from "@/components/sigil";
 import { Avatar } from "./chat";
 
 export function VoteSheet({ view, meId, onVote }: { view: RoomView; meId: string; onVote: (id: string) => Promise<unknown> }) {
@@ -10,21 +11,26 @@ export function VoteSheet({ view, meId, onVote }: { view: RoomView; meId: string
   const [error, setError] = useState("");
   const options = view.players.filter((p) => p.alive && p.id !== meId);
   const alive = view.players.filter((p) => p.alive).length;
+  const reverse = view.mode === "reverse";
   return (
     <motion.div
       initial={{ y: "100%" }}
       animate={{ y: 0 }}
       transition={{ type: "spring", damping: 26, stiffness: 260 }}
-      className="absolute inset-x-0 bottom-0 z-20 rounded-t-3xl border-t border-line bg-panel/95 p-5 backdrop-blur-xl"
+      className="absolute inset-x-0 bottom-0 z-20 border-t-2 border-hot/70 bg-ink/95 p-4 backdrop-blur-md md:p-5"
     >
-      <div className="mb-4 flex items-end justify-between">
+      <div className="mb-3 flex items-end justify-between gap-3">
         <div>
-          <p className="font-display text-2xl font-extrabold">{view.mode === "reverse" ? "Who is the human?" : "Who is the bot?"}</p>
-          <p className="text-sm text-muted">
-            {view.youVotedFor ? "Vote locked in. You can still change it." : view.mode === "reverse" ? "Vote like an AI would. Pick someone who seems human." : "Tap a player to vote them out."}
+          <p className="crt glow text-3xl leading-none text-hot">{reverse ? "WHO IS THE HUMAN?" : "WHO IS THE BOT?"}</p>
+          <p className="mt-1 text-xs text-muted">
+            {view.youVotedFor
+              ? "Vote locked. You can still change it."
+              : reverse
+                ? "Vote like an AI would. Pick someone who seems human."
+                : "Select a player to vote them out."}
           </p>
         </div>
-        <span className="font-mono text-sm text-muted">
+        <span className="text-xs text-muted">
           {view.votesIn}/{alive} voted
         </span>
       </div>
@@ -46,15 +52,15 @@ export function VoteSheet({ view, meId, onVote }: { view: RoomView; meId: string
                   setBusy(null);
                 }
               }}
-              className={`flex items-center gap-2 rounded-2xl border p-3 text-left transition ${
-                chosen ? "border-hot bg-hot/15" : "border-line bg-ink hover:border-muted"
+              className={`flex items-center gap-2 rounded-sm border p-2.5 text-left transition ${
+                chosen ? "border-hot bg-hot/15" : "border-line bg-panel hover:border-muted"
               }`}
             >
-              <Avatar p={p} size={34} />
-              <span className="text-sm font-semibold" style={{ color: p.color }}>
-                {p.alias}
+              <Avatar p={p} size={28} />
+              <span className="truncate text-sm font-semibold" style={{ color: p.color }}>
+                {handle(p.alias)}
               </span>
-              {chosen && <span className="ml-auto text-hot">✓</span>}
+              {chosen && <span className="crt ml-auto text-lg leading-none text-hot">[X]</span>}
             </button>
           );
         })}
@@ -64,39 +70,68 @@ export function VoteSheet({ view, meId, onVote }: { view: RoomView; meId: string
   );
 }
 
+/** Interrogation: no vote for the suspect, just the wait for the ruling. */
+export function VerdictWait() {
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 border-t-2 border-warn/60 bg-ink/95 p-5 text-center backdrop-blur-md">
+      <p className="crt glow cursor text-3xl leading-none text-warn">ANALYSING TRANSCRIPT</p>
+      <p className="mt-2 text-xs text-muted">The detective is deciding whether you are human.</p>
+    </div>
+  );
+}
+
 export function RevealCard({ view }: { view: RoomView }) {
   const last = view.eliminations.at(-1);
   if (!last) return null;
   const out = view.players.find((p) => p.id === last.playerId);
   const total = Object.values(last.tally).reduce((a, b) => a + b, 0) || 1;
+  const interrogation = view.variant === "interrogation";
+
+  if (interrogation) {
+    const human = view.verdict === "human";
+    return (
+      <div className="absolute inset-0 z-20 grid place-items-center bg-ink/85 p-4 backdrop-blur-md">
+        <div className="scanbar" />
+        <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} className="card w-full max-w-md p-6 text-center">
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">Case file · verdict</p>
+          <motion.p
+            initial={{ opacity: 0, scale: 1.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.9, type: "spring" }}
+            className={`crt glow mt-3 text-7xl leading-none ${human ? "text-hot" : "text-brand"}`}
+          >
+            {human ? "HUMAN" : "MACHINE"}
+          </motion.p>
+          <p className="mt-3 text-sm text-muted">{human ? "The detective saw through you." : "You passed as an AI."}</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="absolute inset-0 z-20 grid place-items-center bg-ink/80 p-4 backdrop-blur-md">
-      <motion.div
-        initial={{ scale: 0.85, opacity: 0, rotate: -2 }}
-        animate={{ scale: 1, opacity: 1, rotate: 0 }}
-        transition={{ type: "spring", damping: 14 }}
-        className="card w-full max-w-md p-6 text-center"
-      >
+    <div className="absolute inset-0 z-20 grid place-items-center bg-ink/85 p-4 backdrop-blur-md">
+      <div className="scanbar" />
+      <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} className="card w-full max-w-md p-6 text-center">
         {out ? (
           <>
-            <div className="mx-auto mb-3 w-fit">
-              <Avatar p={{ ...out, alive: true }} size={72} />
+            <p className="text-xs uppercase tracking-[0.3em] text-muted">Scanning voted-out player</p>
+            <div className="mx-auto mt-3 w-fit">
+              <Avatar p={{ ...out, alive: true }} size={64} />
             </div>
-            <p className="font-display text-2xl font-extrabold" style={{ color: out.color }}>
-              {out.alias}
+            <p className="crt glow mt-3 text-3xl leading-none" style={{ color: out.color }}>
+              {handle(out.alias)}
             </p>
-            <p className="text-muted">was voted out and was…</p>
             <motion.p
-              initial={{ opacity: 0, scale: 2 }}
+              initial={{ opacity: 0, scale: 1.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 1.2, type: "spring" }}
-              className={`mt-2 font-display text-5xl font-black ${last.wasBot ? "text-brand" : "text-hot"}`}
+              className={`crt glow mt-3 text-6xl leading-none ${last.wasBot ? "text-brand" : "text-hot"}`}
             >
-              {last.wasBot ? "THE BOT 🤖" : "HUMAN 😬"}
+              {last.wasBot ? "AI" : "HUMAN"}
             </motion.p>
           </>
         ) : (
-          <p className="font-display text-3xl font-extrabold">Tie vote. Nobody leaves.</p>
+          <p className="crt glow text-4xl leading-none text-warn">TIE. NOBODY LEAVES.</p>
         )}
         <ul className="mt-5 space-y-1.5 text-left">
           {Object.entries(last.tally)
@@ -106,18 +141,18 @@ export function RevealCard({ view }: { view: RoomView }) {
               return (
                 <li key={id} className="flex items-center gap-2 text-sm">
                   <span className="w-28 truncate" style={{ color: p?.color }}>
-                    {p?.alias}
+                    {p ? handle(p.alias) : ""}
                   </span>
-                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-panel-2">
+                  <span className="h-2 flex-1 overflow-hidden bg-panel-2">
                     <motion.span
                       initial={{ width: 0 }}
                       animate={{ width: `${(n / total) * 100}%` }}
                       transition={{ delay: 0.3, duration: 0.6 }}
-                      className="block h-full rounded-full"
+                      className="block h-full"
                       style={{ background: p?.color }}
                     />
                   </span>
-                  <span className="w-5 text-right font-mono text-muted">{n}</span>
+                  <span className="w-5 text-right text-muted">{n}</span>
                 </li>
               );
             })}

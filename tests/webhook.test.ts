@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { checkWebhookSignature } from "../src/lib/webhook-signature";
 import { allowGameMessage, codeFromChannel } from "../src/lib/game/moderation";
 import { castVote, createRoom, join, start, tick } from "../src/lib/game/engine";
+import { answerAll } from "./helpers";
 
 const sign = (secret: string, nonce: string, ts: string) => createHash("sha1").update(secret + nonce + ts).digest("hex");
 
@@ -31,6 +32,8 @@ test("pre-messaging lets living players talk only during the chat phase", () => 
   join(room, { id: "h2", name: "Meera" }, T0);
   assert.equal(allowGameMessage(room, "h0"), false, "no chat in the lobby");
   start(room, "h0", [{ id: "bot1", personaId: "chill" }], T0);
+  assert.equal(allowGameMessage(room, "h1"), false, "no chat while answering privately");
+  answerAll(room, T0);
   assert.equal(allowGameMessage(room, "h1"), true);
   assert.equal(allowGameMessage(room, "stranger"), false);
   assert.equal(allowGameMessage(room, "gm_botched"), true);
@@ -43,6 +46,7 @@ test("pre-messaging lets living players talk only during the chat phase", () => 
   castVote(room, "bot1", "h2", T0);
   castVote(room, "h2", "h0", T0);
   tick(room, T0 + 200_000);
+  answerAll(room, T0 + 200_000);
   assert.equal(room.phase, "chat");
   assert.equal(allowGameMessage(room, "h2"), false, "eliminated players can't chat");
   assert.equal(allowGameMessage(room, "h0"), true);

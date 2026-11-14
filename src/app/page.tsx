@@ -5,6 +5,7 @@ import { LiveStatsSection } from "@/components/hub/live-stats";
 import { DemoChat } from "@/components/landing/demo-chat";
 import { Nav } from "@/components/nav";
 import { ANDROID_APK_URL } from "@/lib/constants";
+import { SOLO_MODES, TAGLINE } from "@/lib/game/modes";
 
 const STEPS = [
   {
@@ -19,15 +20,15 @@ const STEPS = [
   },
   {
     n: "03",
-    title: "Chat, suspect, vote",
-    body: "Talk about the round's prompt for 90 seconds, then vote someone out. Catch the bot before it outlasts you.",
+    title: "Answer, argue, vote",
+    body: "Everyone answers the prompt privately and the answers drop together. Then you argue about who wrote like a machine, and vote someone out.",
   },
 ];
 
 const BOT_TRAITS = [
-  ["Types like a person", "It shows a typing indicator, hesitates, and takes longer to write longer messages."],
+  ["Reads the room", "It writes its answer after seeing yours, matching the group's length, slang and vibe without copying anyone."],
   ["Has a personality", "Each game it plays a different character, with its own slang, typos and habits."],
-  ["Doesn't answer everything", "Like a real friend, it ignores some messages and jumps into others."],
+  ["Uses your names", "If someone in the chat calls a friend by name, the bot picks it up and uses it too."],
   ["Votes to survive", "It reads the room, picks a suspect and votes with a reason you'll see afterwards."],
 ];
 
@@ -59,7 +60,7 @@ export default function Home() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-muted">
-              2 to 8 friends, or solo against 3 AIs · 5 minutes · any phone ·{" "}
+              2 to 8 friends, quick match with strangers, or 5 solo modes · any phone ·{" "}
               <Link href="/how-to-play" className="text-cool hover:underline">
                 how it works
               </Link>
@@ -112,6 +113,25 @@ export default function Home() {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section className="term mx-auto w-full max-w-6xl overflow-hidden rounded-md border border-line px-5 py-10 md:px-10 md:py-14">
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} solo · who&apos;s the human</p>
+          <h2 className="crt glow mt-3 text-6xl leading-[0.85] text-brand md:text-8xl">{TAGLINE.solo}</h2>
+          <p className="mt-4 max-w-2xl text-muted">
+            Nobody around? Flip the game. You are the only human in a chat full of AIs that are hunting you. Pass as one of them.
+          </p>
+          <ul className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {SOLO_MODES.map((m) => (
+              <li key={m.id} className="card flex flex-col p-4">
+                <p className="crt text-2xl leading-none text-brand">{m.label.toUpperCase()}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted">{m.blurb}</p>
+              </li>
+            ))}
+          </ul>
+          <Link href="/play/whos-the-bot#solo" className="btn btn-brand mt-8 px-7 py-3.5">
+            Pick a solo mode
+          </Link>
         </section>
 
         <section className="mx-auto w-full max-w-6xl px-4">

@@ -88,13 +88,14 @@ export const GAME_EVENT_MESSAGE = "BT:Game";
 /** Transient "someone is typing" signal, works in group channels unlike the built-in typing status. */
 export const TYPING_MESSAGE = "BT:Typing";
 
-export function sendGroupText(channelId: string, fromUserId: string, text: string) {
+export function sendGroupText(channelId: string, fromUserId: string, text: string, extra?: Record<string, unknown>) {
   return call<{ messageIds: { messageId: string }[] }>("/v4/group-channel/message/send", {
     fromUserId,
     toChannelIds: [channelId],
     messageType: TEXT_MESSAGE,
-    content: JSON.stringify({ content: text }),
-    isEchoToSender: 0,
+    content: JSON.stringify({ content: text, ...(extra ? { extra: JSON.stringify(extra) } : {}) }),
+    // Answers are posted on a human's behalf, so their own client needs a copy too.
+    isEchoToSender: extra ? 1 : 0,
   });
 }
 

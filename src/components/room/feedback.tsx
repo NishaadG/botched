@@ -4,11 +4,11 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const FACES = [
-  { v: 1, face: "😴", label: "Boring" },
-  { v: 2, face: "😕", label: "Meh" },
-  { v: 3, face: "🙂", label: "Fun" },
-  { v: 4, face: "😄", label: "Really fun" },
-  { v: 5, face: "🤯", label: "Loved it" },
+  { v: 1, label: "Boring" },
+  { v: 2, label: "Meh" },
+  { v: 3, label: "Fun" },
+  { v: 4, label: "Really fun" },
+  { v: 5, label: "Loved it" },
 ];
 
 /** Quick post-game rating. Comments may be shown on the public stats page. */
@@ -40,7 +40,7 @@ export function FeedbackCard({ code }: { code: string }) {
       <AnimatePresence mode="wait" initial={false}>
         {state === "done" ? (
           <motion.p key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center font-semibold">
-            Thanks! That helps a lot. 💚
+            Thanks. That helps a lot.
           </motion.p>
         ) : (
           <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="flex flex-col gap-3">
@@ -55,11 +55,12 @@ export function FeedbackCard({ code }: { code: string }) {
                   aria-label={f.label}
                   title={f.label}
                   onClick={() => setRating(f.v)}
-                  className={`grid h-12 flex-1 place-items-center rounded-2xl border text-2xl transition ${
-                    rating === f.v ? "scale-105 border-brand bg-brand/15" : "border-line bg-ink hover:bg-white/5"
+                  className={`flex h-14 flex-1 flex-col items-center justify-center rounded-xl border transition ${
+                    rating >= f.v ? "border-brand bg-brand/15 text-brand" : "border-line bg-ink text-muted hover:bg-white/5"
                   }`}
                 >
-                  {f.face}
+                  <span className="text-lg font-bold leading-none">{f.v}</span>
+                  <span className="mt-1 text-[10px] leading-none">{f.label}</span>
                 </button>
               ))}
             </div>

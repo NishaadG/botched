@@ -5,6 +5,8 @@ import { Footer } from "@/components/footer";
 import { LiveStatsSection } from "@/components/hub/live-stats";
 import { NextGameVote } from "@/components/hub/next-game-vote";
 import { Nav } from "@/components/nav";
+import { Sigil } from "@/components/sigil";
+import { TAGLINE } from "@/lib/game/modes";
 import { NEXT_GAMES } from "@/lib/stats";
 
 export const metadata: Metadata = {
@@ -13,9 +15,9 @@ export const metadata: Metadata = {
 };
 
 const PREVIEW = [
-  { avatar: "🦊", color: "#fb923c", text: "ok who here actually likes pineapple pizza" },
-  { avatar: "🐸", color: "#a3e635", text: "me lol. fight me" },
-  { avatar: "🦉", color: "#a78bfa", text: "frog that answer came way too fast" },
+  { alias: "Mango Fox", color: "#fb923c", text: "ok who here actually likes pineapple pizza" },
+  { alias: "Lime Frog", color: "#a3e635", text: "me lol. fight me" },
+  { alias: "Violet Owl", color: "#a78bfa", text: "frog that answer came way too fast" },
 ];
 
 export default function Hub() {
@@ -47,27 +49,24 @@ export default function Hub() {
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-muted">Game 01</span>
             </div>
             <h2 className="mt-4 font-display text-4xl font-black md:text-6xl">Who&apos;s the Bot?</h2>
+            <p className="mt-2 font-display text-xl font-bold text-brand">{TAGLINE.classic}</p>
             <p className="mt-3 max-w-lg text-lg text-muted">
-              One player in the chat is an AI wearing a human mask. Chat about the prompt, vote people out, and catch it
+              One player in the chat is an AI wearing a human mask. Answer the prompt, argue, vote people out, and catch it
               before it outlasts you.
             </p>
             <ul className="mt-5 flex flex-wrap gap-2 text-sm text-muted">
               <li className="rounded-full border border-line px-3 py-1">2 to 8 players</li>
               <li className="rounded-full border border-line px-3 py-1">~5 minutes</li>
               <li className="rounded-full border border-line px-3 py-1">Social deduction</li>
-              <li className="rounded-full border border-brand/50 px-3 py-1 text-brand">Solo mode: 1 human vs 3 AIs</li>
+              <li className="rounded-full border border-brand/50 px-3 py-1 text-brand">5 solo modes</li>
+              <li className="rounded-full border border-line px-3 py-1">Quick match</li>
             </ul>
             <span className="btn btn-brand mt-7 px-7 py-4 text-lg">Play now →</span>
           </div>
           <div className="relative flex flex-col justify-end gap-2" aria-hidden>
             {PREVIEW.map((m, i) => (
               <div key={i} className="flex items-end gap-2" style={{ opacity: 0.55 + i * 0.2 }}>
-                <span
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full"
-                  style={{ background: `${m.color}22`, boxShadow: `inset 0 0 0 2px ${m.color}` }}
-                >
-                  {m.avatar}
-                </span>
+                <Sigil seed={m.alias} color={m.color} size={32} />
                 <span className="rounded-2xl rounded-bl-md bg-panel-2 px-3.5 py-2">{m.text}</span>
               </div>
             ))}

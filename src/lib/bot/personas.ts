@@ -74,5 +74,16 @@ export const AI_PERSONAS: Persona[] = [
   },
 ];
 
+/** Interrogation mode's only AI: questions the suspect, then rules human or machine. */
+export const DETECTIVE: Persona = {
+  id: "detective",
+  label: "Detective Unit-7",
+  style: "A dry, clipped, noir-style AI interrogator. Short sentences. Never friendly, never cruel.",
+  lowercase: false,
+  typoRate: 0,
+  typingSpeed: 18,
+  chattiness: 1,
+};
+
 export const personaById = (id: string) =>
-  PERSONAS.find((p) => p.id === id) ?? AI_PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];
+  PERSONAS.find((p) => p.id === id) ?? AI_PERSONAS.find((p) => p.id === id) ?? (id === DETECTIVE.id ? DETECTIVE : PERSONAS[0]);

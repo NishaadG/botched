@@ -12,10 +12,16 @@ export default async function Image({ params }: { params: Promise<{ code: string
   const room = await loadRoom(code.toUpperCase());
   const humans = room?.players.filter((p) => !p.isBot).length ?? 0;
 
-  if (room?.phase === "over" && room.mode === "reverse") {
+  if (room?.phase === "over" && room.variant === "interrogation") {
     return room.winner === "humans"
-      ? ogCard({ kicker: "Who's the Human", title: "A human fooled", accent: "three AIs.", sub: "Solo mode: hide among AIs that are hunting you. Could you pass as a bot?" })
-      : ogCard({ kicker: "Who's the Human", title: "Three AIs found", accent: "the human.", sub: "Solo mode: hide among AIs that are hunting you. Could you pass as a bot?", tone: "hot" });
+      ? ogCard({ kicker: "Interrogation", title: "Filed as", accent: "a machine.", sub: "An AI detective questioned a human and never noticed. AI took your job. Time to take its." })
+      : ogCard({ kicker: "Interrogation", title: "Caught being", accent: "human.", sub: "An AI detective saw through the act. Could you pass?", tone: "hot" });
+  }
+  if (room?.phase === "over" && room.mode === "reverse") {
+    const n = room.players.filter((p) => p.isBot).length;
+    return room.winner === "humans"
+      ? ogCard({ kicker: "Who's the Human", title: "A human fooled", accent: `${n} AIs.`, sub: "AI took your job. Time to take its. Could you pass as a bot?" })
+      : ogCard({ kicker: "Who's the Human", title: `${n} AIs found`, accent: "the human.", sub: "AI took your job. Time to take its. Could you pass as a bot?", tone: "hot" });
   }
   if (room?.phase === "over") {
     const bot = room.players.find((p) => p.isBot);

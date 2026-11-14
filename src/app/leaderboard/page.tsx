@@ -18,7 +18,6 @@ const BOARDS: { key: BoardKey; title: string; unit: string; blurb: string }[] = 
   { key: "games", title: "Regulars", unit: "games", blurb: "Most games finished." },
 ];
 
-const MEDALS = ["🥇", "🥈", "🥉"];
 
 async function Board({ k, unit }: { k: BoardKey; unit: string }) {
   const rows = await getBoard(k, 10);
@@ -37,7 +36,7 @@ async function Board({ k, unit }: { k: BoardKey; unit: string }) {
     <ol className="flex flex-col gap-1.5">
       {rows.map((r, i) => (
         <li key={r.id} className={`flex items-center gap-3 rounded-xl px-3 py-2 ${i === 0 ? "bg-brand/10" : "bg-ink/60"}`}>
-          <span className="w-7 text-center font-mono text-sm text-muted">{MEDALS[i] ?? i + 1}</span>
+          <span className="w-7 text-center font-mono text-sm text-muted">{String(i + 1).padStart(2, "0")}</span>
           <span className="truncate font-semibold">{r.name}</span>
           <span className="ml-auto font-mono text-sm tabular-nums">
             {r.score} <span className="text-muted">{unit}</span>

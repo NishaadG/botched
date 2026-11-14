@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Nav } from "@/components/nav";
 import { NicknameForm, useSession } from "@/components/session";
+import { SOLO_MODES, TAGLINE, type SoloVariant } from "@/lib/game/modes";
 
 const noop = () => () => {};
 
@@ -11,9 +12,11 @@ export default function WhosTheBotStart() {
   const router = useRouter();
   const { session, loading, saveName } = useSession();
   const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [variant, setVariant] = useState<SoloVariant>("classic");
+  const [waiting, setWaiting] = useState<number | null>(null);
   // "?solo=1" (the landing page's solo button) goes straight into a solo game once there's a nickname.
   const soloIntent = useSyncExternalStore(
     noop,
@@ -22,118 +25,186 @@ export default function WhosTheBotStart() {
   );
   const started = useRef(false);
 
-  const create = async (mode: "classic" | "reverse" = "classic") => {
-    setBusy(true);
+  const go = async (url: string, key: string) => {
+    setBusy(key);
     setError("");
     try {
-      const res = await fetch(mode === "reverse" ? "/api/rooms?mode=reverse" : "/api/rooms", { method: "POST" });
+      const res = await fetch(url, { method: "POST" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error);
       router.push(`/r/${j.code}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create a room.");
-      setBusy(false);
+      setError(e instanceof Error ? e.message : "Could not open a room.");
+      setBusy(null);
     }
   };
+  const create = () => go("/api/rooms", "create");
+  const solo = (v: SoloVariant = variant) => go(`/api/rooms?mode=reverse&variant=${v}`, "solo");
+  const quickMatch = () => go("/api/match", "match");
 
   useEffect(() => {
     if (!soloIntent || !session || renaming || started.current) return;
     started.current = true;
-    void create("reverse");
-    // create only reads state setters, so it is safe to leave out of the dependencies.
+    void solo("classic");
+    // solo only reads state setters, so it is safe to leave out of the dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soloIntent, session, renaming]);
 
+  // How many people are sitting in the quick-match lobby right now.
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      fetch("/api/match", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((j) => alive && setWaiting(Number(j.waiting ?? 0)))
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 8000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  const picked = SOLO_MODES.find((m) => m.id === variant)!;
+
   return (
-    <div className="flex min-h-dvh flex-col bg-grid">
-      <Nav />
-      <main className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-8 px-4 py-10 md:grid-cols-2">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Game 01</p>
-          <h1 className="mt-3 font-display text-5xl font-black leading-[0.95] md:text-6xl">
-            Who&apos;s
+    <div className="term flex min-h-dvh flex-col">
+      <header className="flex items-center justify-between gap-3 border-b border-line/80 px-4 py-3">
+        <Link href="/" className="crt glow text-2xl leading-none text-brand">
+          BOTCHED<span className="text-muted">://whos-the-bot</span>
+        </Link>
+        <Link href="/how-to-play" className="text-xs uppercase tracking-widest text-muted hover:text-text">
+          Rules
+        </Link>
+      </header>
+
+      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-8 md:grid-cols-[1fr_1.1fr] md:py-12">
+        <div className="flex flex-col">
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} game 01</p>
+          <h1 className="crt glow mt-3 text-7xl leading-[0.85] text-brand md:text-8xl">
+            WHO&apos;S
             <br />
-            the Bot?
+            THE BOT?
           </h1>
-          <p className="mt-5 max-w-md text-lg text-muted">
-            Everyone gets a secret alias. One of the aliases is an AI that types, hesitates and jokes like a person. Chat,
-            suspect, vote. Catch it before it outlasts you.
+          <p className="crt mt-4 text-3xl leading-none text-text">{TAGLINE.classic}</p>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted">
+            Everyone gets a secret alias. One of them is an AI. Each round you answer a question privately, the answers drop
+            together, then you argue about who wrote like a machine and vote someone out.
           </p>
-          <ul className="mt-6 flex flex-wrap gap-2 text-sm text-muted">
-            <li className="rounded-full border border-line px-3 py-1">2 to 8 players</li>
-            <li className="rounded-full border border-line px-3 py-1">5 to 8 minutes</li>
-            <li className="rounded-full border border-line px-3 py-1">No sign-up</li>
+          <ul className="mt-6 grid max-w-md grid-cols-3 gap-2 text-center text-xs text-muted">
+            {["2-8 players", "5-8 minutes", "No sign-up"].map((t) => (
+              <li key={t} className="border border-line px-2 py-2">
+                {t}
+              </li>
+            ))}
           </ul>
+          <div className="mt-8 hidden border border-line bg-panel p-4 text-sm md:block">
+            <p className="text-muted">
+              <span className="text-brand">01</span> answer privately <span className="text-line">──</span>{" "}
+              <span className="text-brand">02</span> discuss <span className="text-line">──</span> <span className="text-brand">03</span> vote
+            </p>
+            <p className="mt-2 text-xs text-muted">
+              The bot reads the answers already in and tries to sound like the room. Catch it before it outlasts you.
+            </p>
+          </div>
         </div>
 
-        <div className="card p-6 md:p-8">
+        <div className="flex flex-col gap-4">
           {loading || (soloIntent && session && !renaming && !error) ? (
-            <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-2xl bg-panel-2 text-muted">
+            <div className="card flex h-56 flex-col items-center justify-center gap-3 text-muted">
               {soloIntent && session ? (
                 <>
-                  <span className="text-3xl" aria-hidden>
-                    🤖🤖🤖
-                  </span>
-                  Setting up your solo game…
+                  <p className="crt glow cursor text-3xl text-brand">BOOTING 3 AIs</p>
+                  <p className="text-sm">{TAGLINE.solo}</p>
                 </>
               ) : (
-                <span className="sr-only">Loading</span>
+                <p className="crt cursor text-2xl text-brand">LOADING</p>
               )}
             </div>
           ) : !session || renaming ? (
-            <NicknameForm
-              initial={session?.name}
-              cta={renaming ? "Save" : soloIntent ? "Play solo vs 3 AIs" : "Continue"}
-              onSubmit={async (n) => {
-                await saveName(n);
-                setRenaming(false);
-              }}
-            />
-          ) : (
-            <div className="flex flex-col gap-5">
-              <p className="text-muted">
-                Playing as <b className="text-text">{session.name}</b>{" "}
-                <button className="text-sm text-cool underline-offset-2 hover:underline" onClick={() => setRenaming(true)}>
-                  change
-                </button>
-              </p>
-              <button className="btn btn-brand py-4 text-lg" onClick={() => create()} disabled={busy}>
-                {busy ? "Opening a room…" : "Create a room"}
-              </button>
-              <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-muted">
-                <span className="h-px flex-1 bg-line" /> or join one <span className="h-px flex-1 bg-line" />
-              </div>
-              <form
-                className="flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (code.trim().length >= 4) router.push(`/r/${code.trim().toUpperCase()}`);
+            <div className="card p-6">
+              <p className="mb-3 text-xs uppercase tracking-widest text-muted">{">"} identify yourself</p>
+              <NicknameForm
+                initial={session?.name}
+                cta={renaming ? "Save" : soloIntent ? "Play solo vs 3 AIs" : "Continue"}
+                onSubmit={async (n) => {
+                  await saveName(n);
+                  setRenaming(false);
                 }}
-              >
-                <input
-                  className="input font-mono text-lg uppercase tracking-[0.3em]"
-                  placeholder="CODE"
-                  maxLength={6}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/[^a-z]/gi, ""))}
-                  aria-label="Room code"
-                />
-                <button className="btn btn-ghost" disabled={code.trim().length < 4}>
-                  Join
-                </button>
-              </form>
-              {error && <p className="text-sm text-hot">{error}</p>}
-              <div className="rounded-2xl border border-line bg-ink p-4">
-                <p className="text-sm font-semibold">Nobody around right now?</p>
-                <p className="mt-1 text-sm text-muted">
-                  Play <b className="text-text">Who&apos;s the Human</b> solo: you&apos;re the only human among three AIs that are hunting
-                  you. Pass as a bot for 3 rounds.
-                </p>
-                <button className="btn btn-ghost mt-3 w-full" onClick={() => create("reverse")} disabled={busy}>
-                  Play solo vs 3 AIs
+              />
+            </div>
+          ) : (
+            <>
+              <div className="card flex flex-col gap-4 p-5 md:p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-widest text-muted">{">"} multiplayer</p>
+                  <p className="text-xs text-muted">
+                    as <b className="text-text">{session.name}</b>{" "}
+                    <button className="text-brand underline-offset-2 hover:underline" onClick={() => setRenaming(true)}>
+                      change
+                    </button>
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button className="btn btn-brand py-4" onClick={create} disabled={busy !== null}>
+                    {busy === "create" ? "Opening…" : "Room for friends"}
+                  </button>
+                  <button className="btn btn-ghost flex-col gap-0 py-3" onClick={quickMatch} disabled={busy !== null}>
+                    <span>{busy === "match" ? "Matching…" : "Quick match"}</span>
+                    <span className="text-[10px] normal-case tracking-normal text-muted">
+                      {waiting ? `${waiting} waiting now` : "random players"}
+                    </span>
+                  </button>
+                </div>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (code.trim().length >= 4) router.push(`/r/${code.trim().toUpperCase()}`);
+                  }}
+                >
+                  <input
+                    className="input crt text-2xl uppercase tracking-[0.3em]"
+                    placeholder="ROOM CODE"
+                    maxLength={6}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/[^a-z]/gi, ""))}
+                    aria-label="Room code"
+                  />
+                  <button className="btn btn-ghost" disabled={code.trim().length < 4}>
+                    Join
+                  </button>
+                </form>
+              </div>
+
+              <div id="solo" className="card flex flex-col gap-4 p-5 md:p-6">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-muted">{">"} solo · who&apos;s the human</p>
+                  <p className="crt glow mt-2 text-3xl leading-none text-brand">{TAGLINE.solo}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5" role="radiogroup" aria-label="Solo mode">
+                  {SOLO_MODES.map((m) => (
+                    <button
+                      key={m.id}
+                      role="radio"
+                      aria-checked={variant === m.id}
+                      onClick={() => setVariant(m.id)}
+                      className={`truncate rounded-sm border px-1 py-2 text-[11px] uppercase transition ${
+                        variant === m.id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:border-muted"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="min-h-10 text-sm text-muted">{picked.blurb}</p>
+                <button className="btn btn-brand py-3.5" onClick={() => solo()} disabled={busy !== null}>
+                  {busy === "solo" ? "Booting AIs…" : picked.id === "interrogation" ? "Face the detective" : `Play ${picked.label.toLowerCase()}`}
                 </button>
               </div>
-            </div>
+              {error && <p className="text-sm text-hot">{error}</p>}
+            </>
           )}
         </div>
       </main>

@@ -30,8 +30,8 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/rooms/[code]/r
 
   let next = newRoomCode();
   for (let i = 0; i < 5 && (await loadRoom(next)); i++) next = newRoomCode();
-  const room = createRoom(next, { id: session.uid, name: session.name }, Date.now(), old.mode ?? "classic");
-  room.settings = old.settings;
+  const room = createRoom(next, { id: session.uid, name: session.name }, Date.now(), old.mode ?? "classic", old.variant);
+  room.settings = { ...room.settings, ...old.settings };
   room.test = old.test;
   const title = `${room.mode === "reverse" ? "Who's the Human" : "Who's the Bot"} · ${next}`;
   await createGroupChannel(room.channelId, session.uid, title, [session.uid]);

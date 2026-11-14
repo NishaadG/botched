@@ -72,7 +72,7 @@ async function Wishlist() {
         <li key={r.id} className="grid grid-cols-[1fr_auto] items-center gap-3">
           <div>
             <p className="text-sm font-semibold">
-              {r.emoji} {r.title}
+              {r.title}
             </p>
             <div className="mt-1 h-2 rounded-full bg-ink">
               <div className="h-2 rounded-full bg-warn" style={{ width: `${(r.n / top) * 100}%` }} />

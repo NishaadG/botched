@@ -1,20 +1,9 @@
 import { GM_ID, LOUNGE_ID, TEST_LOUNGE_ID } from "@/lib/constants";
 import { loadRoom } from "@/lib/game/runner";
-import { createOpenChannel, sendOpenText } from "@/lib/nexconn-server";
+import { ensureLounge } from "@/lib/lounge";
+import { sendOpenText } from "@/lib/nexconn-server";
 import { getSession, isTestClient } from "@/lib/session";
 import { kv } from "@/lib/store";
-
-/** Makes sure the public lounge (a Nexconn open channel) exists. Re-created lazily if it ever expires. */
-async function ensureLounge(id: string) {
-  if (await kv.get(`lounge:ready:${id}`)) return;
-  try {
-    await createOpenChannel(id);
-  } catch (err) {
-    // Already exists is fine; anything else is logged and the client will surface a connect error.
-    console.warn("[lounge] create", err instanceof Error ? err.message : err);
-  }
-  await kv.set(`lounge:ready:${id}`, 1, 60 * 30);
-}
 
 export async function GET() {
   const id = (await isTestClient()) ? TEST_LOUNGE_ID : LOUNGE_ID;

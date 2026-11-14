@@ -15,12 +15,12 @@ import {
   TYPING,
   type IncomingMessage,
 } from "@/lib/nexconn-client";
-import { Logo } from "@/components/nav";
 import { NicknameForm, useSession } from "@/components/session";
 import { Lobby } from "@/components/room/lobby";
 import { ChatPanel } from "@/components/room/chat";
 import { PlayersPanel, PhaseBar } from "@/components/room/hud";
-import { VoteSheet, RevealCard } from "@/components/room/vote";
+import { VoteSheet, RevealCard, VerdictWait } from "@/components/room/vote";
+import { handle } from "@/components/sigil";
 import { Results } from "@/components/room/results";
 
 import { GM_ID } from "@/lib/constants";
@@ -92,6 +92,9 @@ export function RoomClient() {
       });
   }, [session, code, apply, refresh]);
 
+  const isHost = view?.hostId === session?.uid;
+  const phase = view?.phase;
+
   // Real-time: connect to Nexconn, load history, listen for chat, typing and game events.
   useEffect(() => {
     if (!session || !appKey || !view?.channelId) return;
@@ -131,9 +134,27 @@ export function RoomClient() {
     };
   }, [session, appKey, view?.channelId, refresh]);
 
+  // Answers are posted by the server on each player's behalf; pull history once they drop so nothing is missed.
+  const round = view?.round;
+  useEffect(() => {
+    if (!session || !view?.channelId || phase !== "chat") return;
+    const channelId = view.channelId;
+    const t = setTimeout(() => {
+      loadHistory(channelId)
+        .then((history) =>
+          setMessages((list) => {
+            const ids = new Set(list.map((x) => x.id));
+            const fresh = history.filter((h) => h.type !== GAME_EVENT && h.type !== TYPING && !ids.has(h.id));
+            return fresh.length ? [...list, ...fresh].sort((a, b) => a.at - b.at) : list;
+          }),
+        )
+        .catch(() => {});
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [phase, round, session, view?.channelId]);
+
   // Timers: the host drives the clock; everyone else is a slower backup.
-  const isHost = view?.hostId === session?.uid;
-  const phase = view?.phase;
+
   useEffect(() => {
     if (!session || !phase || phase === "lobby" || phase === "over") return;
     const every = isHost ? 1200 : 4000;
@@ -160,6 +181,8 @@ export function RoomClient() {
     const id = setInterval(refresh, phase === "lobby" ? 3000 : 5000);
     return () => clearInterval(id);
   }, [session, phase, refresh]);
+
+  const startGame = useCallback(() => post(code, "start").then(apply), [code, apply]);
 
   const send = useCallback(
     async (text: string) => {
@@ -224,45 +247,45 @@ export function RoomClient() {
 
   const me = view.you;
 
+  const inGame = view.phase !== "lobby" && view.phase !== "over";
+  const interrogation = view.variant === "interrogation";
+
   return (
-    <div className="flex min-h-dvh flex-col bg-grid">
-      <header className="flex items-center justify-between gap-3 border-b border-line/60 px-4 py-3">
-        <Logo className="text-lg" />
+    <div className={`term flex flex-col ${inGame ? "h-dvh overflow-hidden" : "min-h-dvh"}`}>
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line/80 bg-ink/70 px-4 py-2.5">
+        <Link href="/" className="crt glow text-2xl leading-none text-brand">
+          BOTCHED<span className="text-muted">://{view.mode === "reverse" ? "whos-the-human" : "whos-the-bot"}</span>
+        </Link>
         <div className="flex items-center gap-2 text-xs text-muted">
-          <span className={`h-2 w-2 rounded-full ${chatStatus === "connected" ? "bg-brand" : "bg-warn animate-pulse"}`} />
-          {chatStatus === "connected" ? "Live" : "Connecting"} · Room <span className="font-mono text-text">{view.code}</span>
+          <span className={`h-2 w-2 ${chatStatus === "connected" ? "bg-brand shadow-[0_0_8px] shadow-brand" : "animate-pulse bg-warn"}`} />
+          <span className="hidden sm:inline">{chatStatus === "connected" ? "LIVE" : "CONNECTING"} ·</span> ROOM{" "}
+          <span className="text-text">{view.code}</span>
         </div>
       </header>
 
-      {error && <p className="bg-hot/15 px-4 py-2 text-center text-sm text-hot">{error}</p>}
+      {error && <p className="shrink-0 bg-hot/15 px-4 py-2 text-center text-sm text-hot">{error}</p>}
 
       {view.phase === "lobby" ? (
-        <Lobby
-          view={view}
-          isHost={isHost}
-          meId={session.uid}
-          online={online}
-          onStart={() => post(code, "start").then(apply)}
-        />
+        <Lobby view={view} isHost={isHost} meId={session.uid} online={online} onStart={startGame} />
       ) : view.phase === "over" ? (
         <Results view={view} messages={gameMessages} players={players} gmId={GM_ID} />
       ) : (
-        <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-4 p-3 md:grid-cols-[1fr_280px] md:p-4">
-          <section className="card relative flex min-h-[70dvh] flex-col overflow-hidden">
+        <main className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 grid-cols-1 gap-3 p-2 md:grid-cols-[1fr_270px] md:gap-4 md:p-4">
+          <section className="card relative flex min-h-0 flex-col overflow-hidden">
             <PhaseBar view={view} offset={offset} />
             <ChatPanel
+              view={view}
               messages={gameMessages}
               players={players}
               gmId={GM_ID}
               meId={session.uid}
               typing={typing}
-              canSend={view.phase === "chat" && Boolean(me?.alive)}
-              phase={view.phase}
-              alive={Boolean(me?.alive)}
               onSend={send}
+              onAnswer={(text) => post(code, "answer", { text }).then(apply)}
               onTyping={() => sendTyping(view.channelId)}
             />
-            {view.phase === "vote" && me?.alive && (
+            {view.phase === "vote" && interrogation && <VerdictWait />}
+            {view.phase === "vote" && !interrogation && me?.alive && (
               <VoteSheet view={view} meId={session.uid} onVote={(targetId) => post(code, "vote", { targetId }).then(apply)} />
             )}
             {view.phase === "reveal" && <RevealCard view={view} />}
@@ -275,13 +298,15 @@ export function RoomClient() {
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-grid px-4 text-center">{children}</main>
-  );
+  return <main className="term flex min-h-dvh flex-col items-center justify-center gap-5 px-4 text-center">{children}</main>;
 }
 
 function Spinner() {
-  return <div className="h-10 w-10 animate-spin rounded-full border-2 border-line border-t-brand" aria-label="Loading" />;
+  return (
+    <p className="crt glow cursor text-3xl text-brand" aria-label="Loading">
+      CONNECTING
+    </p>
+  );
 }
 
 /** What someone sees when they open a link to a finished game they weren't in. */
@@ -292,11 +317,15 @@ function SharedResult({ view }: { view: RoomView }) {
   return (
     <Centered>
       <p className="font-mono text-sm uppercase tracking-[0.3em] text-muted">Room {view.code} · game over</p>
-      <h1 className={`font-display text-5xl font-black leading-none md:text-6xl ${won ? "text-brand" : "text-hot"}`}>
-        {view.mode === "reverse"
+      <h1 className={`crt glow text-6xl leading-none md:text-7xl ${won ? "text-brand" : "text-hot"}`}>
+        {view.variant === "interrogation"
           ? won
-            ? "A human fooled 3 AIs."
-            : "3 AIs found the human."
+            ? "A human fooled an AI detective."
+            : "An AI detective caught a human."
+          : view.mode === "reverse"
+          ? won
+            ? `A human fooled ${view.players.filter((p) => p.isBot).length} AIs.`
+            : `${view.players.filter((p) => p.isBot).length} AIs found the human.`
           : won
             ? `${humans} humans caught the bot.`
             : `The bot fooled ${humans} humans.`}
@@ -304,9 +333,7 @@ function SharedResult({ view }: { view: RoomView }) {
       {bot && view.mode !== "reverse" && (
         <p className="text-lg text-muted">
           It was hiding as{" "}
-          <b style={{ color: bot.color }}>
-            {bot.avatar} {bot.alias}
-          </b>
+          <b style={{ color: bot.color }}>{handle(bot.alias)}</b>
           {won ? ` and got caught in round ${view.round}.` : ` and lasted all ${view.round} rounds.`}
         </p>
       )}

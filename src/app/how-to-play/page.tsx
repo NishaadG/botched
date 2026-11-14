@@ -20,8 +20,9 @@ const RULES = [
   {
     title: "Each round",
     points: [
-      "The game master posts a prompt. Everyone chats about it for 90 seconds.",
-      "Then the chat locks and you have 30 seconds to vote for who you think the bot is.",
+      "Answer: the game master posts a prompt and everyone answers privately. The answers drop into the chat together, so nobody can copy.",
+      "Discuss: 60 seconds to argue about which answer sounded like a machine. The bot reads the room too.",
+      "Vote: the chat locks and you have 30 seconds to vote for who you think the bot is.",
       "The player with the most votes is out and their role is revealed. A tie means nobody leaves.",
     ],
   },
@@ -36,10 +37,11 @@ const RULES = [
 ];
 
 const SOLO = [
-  "Nobody around? Pick “Play solo vs 3 AIs” on the game page.",
-  "It's the game turned around: you're the only human, and three AIs know it. They're hunting you.",
+  "AI took your job. Time to take its. Pick a solo mode on the game page.",
+  "Classic: you're the only human among 3 AIs, and they know it. Survive 3 rounds of votes.",
+  "Interrogation: an AI detective questions you for two and a half minutes, then rules human or machine.",
+  "Blitz (4 AIs, 30-second rounds), Crowd (6 AIs, 5 rounds) and Hard (sharper AIs, no gut calls).",
   "Answer like a language model: calm, tidy, slightly formal. Typos, slang and feelings give you away.",
-  "The AIs vote out whoever seems most human. Survive 3 rounds to win.",
 ];
 
 const TIPS = [
@@ -54,6 +56,7 @@ const FAQ = [
   ["Can the bot see my real name?", "No. During the game everyone, the bot included, only sees aliases."],
   ["Is the bot the same every time?", "No. It plays a different character each game, with its own slang, typing speed and habits."],
   ["Does it work on phones?", "Yes, it is built for phones first. You can also install it to your home screen."],
+  ["Can I play with strangers?", "Yes. Quick match drops you into an open lobby with other real people; it starts by itself once 3 are in."],
 ];
 
 export default function HowToPlay() {

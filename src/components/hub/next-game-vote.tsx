@@ -7,7 +7,6 @@ interface Game {
   id: string;
   title: string;
   blurb: string;
-  emoji: string;
 }
 
 export function NextGameVote({ games }: { games: readonly Game[] }) {
@@ -76,8 +75,8 @@ export function NextGameVote({ games }: { games: readonly Game[] }) {
                 aria-hidden
               />
               <div className="relative flex items-start gap-3">
-                <span className="text-3xl" aria-hidden>
-                  {g.emoji}
+                <span className="font-mono text-xs text-brand" aria-hidden>
+                  {String(games.indexOf(g) + 2).padStart(2, "0")}
                 </span>
                 <div>
                   <h3 className="font-display text-xl font-bold">{g.title}</h3>
@@ -95,7 +94,7 @@ export function NextGameVote({ games }: { games: readonly Game[] }) {
                   disabled={pending !== null || picked}
                   aria-pressed={picked}
                 >
-                  {picked ? "Your pick ✓" : pending === g.id ? "Voting…" : "I want this"}
+                  {picked ? "Your pick" : pending === g.id ? "Voting…" : "I want this"}
                 </button>
               </div>
             </li>

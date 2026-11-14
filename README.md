@@ -13,14 +13,27 @@
 ## How a game goes
 
 1. **Set up.** The host creates a room and shares the link. When the host starts, an AI player joins secretly with its own random alias.
-2. **Chat.** The game master posts a prompt ("What's the last thing you googled? No lying."). Everyone chats for 90 seconds.
-3. **Vote.** Chat locks. Everyone, the bot included, votes for who they think the bot is. Most votes is out; a tie removes nobody.
-4. **Win.** Humans win the moment the bot is voted out. The bot wins if it survives every round, or if only one human is left beside it.
-5. **Reveal.** Real names, every vote, a replay of the chat and the bot's inner monologue. Share the result as a card.
+2. **Answer.** The game master posts a prompt ("What's the last thing you googled? No lying."). Everyone answers privately; the answers drop into the chat together. The AI writes its answer after reading the ones already in, so it matches the room's length, slang and vibe without copying.
+3. **Discuss.** 60 seconds to argue about which answer sounded like a machine. If players call each other by name, the bot picks those names up and uses them too.
+4. **Vote.** Chat locks. Everyone, the bot included, votes for who they think the bot is. Most votes is out; a tie removes nobody.
+5. **Win.** Humans win the moment the bot is voted out. The bot wins if it survives every round, or if only one human is left beside it.
+6. **Reveal.** Real names, every vote, a replay of the chat and the bot's inner monologue. Share the result as a card.
 
 ## Solo mode: Who's the Human
 
-Nobody around? The game flips: **you are the only human in a chat with three AIs, and they know it.** They answer like language models, call out typos, slang and feelings, and vote out whoever seems most human. Pass as a bot for three rounds to win. The AIs play fair: they never see who the human is, only what everyone typed.
+*AI took your job. Time to take its.* Nobody around? The game flips: **you are the only human in a chat full of AIs, and they know it.** They answer like language models, call out typos, slang and feelings, and vote out whoever seems most human. The AIs play fair: they never see who the human is, only what everyone typed.
+
+| Mode | Setup |
+| --- | --- |
+| Classic | 3 AIs, 3 rounds |
+| Interrogation | 1 AI detective questions you for 2.5 minutes, then rules human or machine |
+| Blitz | 4 AIs, 4 rounds, 30-second discussions |
+| Crowd | 6 AIs, 5 rounds |
+| Hard | 3 AIs that never vote on a hunch and compare your style across rounds |
+
+## Quick match
+
+"Quick match" puts strangers into one shared open lobby (real people only). It starts by itself 15 seconds after the third player arrives, and announces itself in the public lounge.
 
 ## The bot
 
@@ -95,7 +108,7 @@ npm test                 # game engine, moderation and webhook signature unit te
 npm run build && ALLOW_FAST_ROOMS=1 npm start -- -p 3210
 npm run e2e              # 3 browsers play a full game over Nexconn
 npm run e2e:lounge       # 2 browsers meet in the lounge and join a game from an invite
-npm run e2e:solo         # 1 player plays solo against three AIs
+npm run e2e:solo         # 1 player plays a solo mode (add: classic | interrogation | blitz | crowd | hard | oneclick)
 ```
 
 The end-to-end scripts use your installed Chrome through Playwright.

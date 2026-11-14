@@ -142,8 +142,8 @@ export function LoungeClient() {
                       animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col items-start gap-3 rounded-2xl border border-brand/30 bg-brand/10 p-4 sm:flex-row sm:items-center"
                     >
-                      <span className="text-2xl" aria-hidden>
-                        🎮
+                      <span className="crt text-2xl leading-none text-brand" aria-hidden>
+                        {">"}
                       </span>
                       <p className="flex-1 text-sm">{m.text}</p>
                       {code && (
