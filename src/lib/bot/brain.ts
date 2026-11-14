@@ -146,17 +146,23 @@ export async function generateLine(
 ): Promise<BotLine> {
   const bot = botById(room, botId)!;
   const persona = personaById(bot.personaId);
-  const answered = room.transcript.some((l) => l.round === room.round && l.kind === "answer");
+  const roundAnswers = room.transcript.filter((l) => l.round === room.round && l.kind === "answer");
+  const othersAnswered = roundAnswers.some((l) => l.from !== botId);
+  const myAlias = playerById(room, botId)?.alias ?? "";
   const task =
     trigger === "prompt" && isInterrogation(room)
       ? `Open the interrogation: introduce yourself in one short line and ask your first question.`
-      : trigger === "prompt" && answered
-        ? `Everyone's answers were just revealed. React to one of them in a few words, or poke at someone whose answer felt off.`
-        : trigger === "prompt"
-      ? `The Game Master just asked everyone: "${room.prompt}". Answer it in character.`
-      : trigger === "nudge"
-        ? `The chat has gone quiet for a while. Get it going again: ask someone a short question, or add a new take on the prompt.`
-        : `Continue the conversation naturally. Respond to the latest messages if it makes sense.`;
+      : trigger === "prompt" && othersAnswered
+        ? `Everyone's answers were just revealed. React to someone else's answer in a few words, or poke at someone whose answer felt off. The answer from ${myAlias} is yours: never talk about it as if someone else wrote it.`
+        : trigger === "prompt" && roundAnswers.length
+          ? `The answers were just revealed, but nobody except you answered. Tease the others for staying silent, in a few words. Your own answer is from ${myAlias}.`
+          : trigger === "prompt"
+            ? `The Game Master just asked everyone: "${room.prompt}". Answer it in character.`
+            : trigger === "nudge" && isInterrogation(room)
+              ? `The suspect has gone quiet. Press them: point out the silence and ask again, more directly.`
+              : trigger === "nudge"
+                ? `The chat has gone quiet for a while. Get it going again: ask someone a short question, or add a new take on the prompt.`
+                : `Continue the conversation naturally. Respond to the latest messages if it makes sense. Lines marked (you) are yours.`;
   try {
     const out = await completeJSON<BotLine>(
       [
