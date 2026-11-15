@@ -1,6 +1,6 @@
 import { offlineLine, promptIndexOf, humanScore } from "../bot/offline";
 import { ALIASES, PROMPTS, shuffle } from "./content";
-import { CLASSIC_TIMERS, soloMode, type SoloVariant } from "./modes";
+import { CLASSIC_TIMERS, classicRounds, soloMode, TIMER_CHOICES, type SoloVariant, type TimerKey, type Timers } from "./modes";
 import { MAX_HUMANS, MIN_HUMANS, type BotState, type ChatLine, type Effect, type Mode, type Player, type Room } from "./types";
 
 /**
@@ -79,6 +79,26 @@ export function leave(room: Room, userId: string): Effect[] {
   return [{ type: "event", event: { kind: "lobby" } }];
 }
 
+/** The host of a friends' room picks how long each phase lasts, before the game starts. */
+export function configure(room: Room, userId: string, patch: Partial<Pick<Timers, TimerKey>>): Effect[] {
+  if (room.phase !== "lobby") throw new GameError("The game has already started.");
+  if (room.mode === "reverse" || room.matchmade) throw new GameError("This room uses fixed timers.");
+  if (room.hostId !== userId) throw new GameError("Only the host can change the timers.");
+  let changed = false;
+  for (const key of Object.keys(TIMER_CHOICES) as TimerKey[]) {
+    const value = patch[key];
+    if (value === undefined) continue;
+    if (!(TIMER_CHOICES[key] as readonly number[]).includes(value)) throw new GameError("Pick one of the listed times.");
+    if (room.settings[key] !== value) {
+      room.settings[key] = value;
+      changed = true;
+    }
+  }
+  if (!changed) return [];
+  room.version++;
+  return [{ type: "event", event: { kind: "lobby" } }];
+}
+
 function welcomeText(room: Room) {
   if (!isReverse(room)) {
     return `Welcome. ${humans(room).length} humans, 1 bot. Everyone has a secret alias. Each round: answer privately, then discuss, then vote. Find the bot before it outlasts you.`;
@@ -118,7 +138,7 @@ export function start(
       thinkingSince: null,
     }),
   );
-  room.maxRounds = isReverse(room) ? soloMode(room.variant).rounds : Math.min(5, Math.max(2, humans(room).length));
+  room.maxRounds = isReverse(room) ? soloMode(room.variant).rounds : classicRounds(humans(room).length);
   room.startedAt = now;
   return [{ type: "gm", text: welcomeText(room) }, ...startRound(room, now, rand)];
 }

@@ -22,6 +22,24 @@ export const FAST_TIMERS: Timers = { answerSeconds: 12, chatSeconds: 20, voteSec
 /** Recording the demo video: long enough to type on camera, short enough to keep the video tight. */
 export const DEMO_TIMERS: Timers = { answerSeconds: 35, chatSeconds: 32, voteSeconds: 15, revealSeconds: 5 };
 
+/** The times a host can pick in a friends' room, per phase (seconds). */
+export const TIMER_CHOICES = {
+  answerSeconds: [20, 30, 40, 60, 90],
+  chatSeconds: [30, 45, 60, 90, 120, 180],
+  voteSeconds: [15, 20, 30, 45],
+} as const;
+export type TimerKey = keyof typeof TIMER_CHOICES;
+
+/** One-tap pace presets built from the choices above. */
+export const PACES: { id: string; label: string; timers: Pick<Timers, TimerKey> }[] = [
+  { id: "quick", label: "Quick", timers: { answerSeconds: 20, chatSeconds: 30, voteSeconds: 15 } },
+  { id: "normal", label: "Normal", timers: { answerSeconds: 40, chatSeconds: 60, voteSeconds: 30 } },
+  { id: "chill", label: "Chill", timers: { answerSeconds: 60, chatSeconds: 120, voteSeconds: 45 } },
+];
+
+/** Rounds a friends' game will play with this many humans (the bot can end it sooner). */
+export const classicRounds = (humans: number) => Math.min(5, Math.max(2, humans));
+
 export interface SoloMode {
   id: SoloVariant;
   label: string;

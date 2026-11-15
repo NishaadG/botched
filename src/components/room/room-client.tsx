@@ -266,7 +266,7 @@ export function RoomClient() {
       {error && <p className="shrink-0 bg-hot/15 px-4 py-2 text-center text-sm text-hot">{error}</p>}
 
       {view.phase === "lobby" ? (
-        <Lobby view={view} isHost={isHost} meId={session.uid} online={online} onStart={startGame} chatReady={chatStatus === "connected"} />
+        <Lobby view={view} isHost={isHost} meId={session.uid} online={online} onStart={startGame} onConfigure={(patch) => post(code, "settings", patch).then(apply)} chatReady={chatStatus === "connected"} />
       ) : view.phase === "over" ? (
         <Results view={view} messages={gameMessages} players={players} gmId={GM_ID} />
       ) : (

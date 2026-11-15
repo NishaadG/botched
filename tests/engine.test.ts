@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addMessage, castVote, createRoom, join, start, submitAnswer, tick, tickDue, viewFor } from "../src/lib/game/engine";
+import { addMessage, castVote, configure, createRoom, join, start, submitAnswer, tick, tickDue, viewFor } from "../src/lib/game/engine";
 import { answerAll, chatLines } from "./helpers";
 
 const T0 = 1_000_000;
@@ -166,4 +166,24 @@ test("an AI that never answers gets a fallback after a short grace period", () =
   assert.equal(room.phase, "chat");
   assert.ok(room.answers?.bot1, "the AI got a fallback answer");
   assert.equal(room.transcript.filter((l) => l.kind === "answer").length, 1, "silent humans are skipped");
+});
+
+test("the host picks the timers in the lobby, and only from the listed choices", () => {
+  const room = createRoom("ABCDE", { id: "h0", name: "Asha" }, T0);
+  join(room, { id: "h1", name: "Kabir" }, T0);
+  assert.throws(() => configure(room, "h1", { chatSeconds: 120 }), /host/);
+  assert.throws(() => configure(room, "h0", { chatSeconds: 7 }), /listed/);
+  configure(room, "h0", { answerSeconds: 20, chatSeconds: 120, voteSeconds: 45 });
+  assert.deepEqual([room.settings.answerSeconds, room.settings.chatSeconds, room.settings.voteSeconds], [20, 120, 45]);
+  start(room, "h0", [{ id: "b", personaId: "chill" }], T0);
+  assert.equal(room.phaseEndsAt, T0 + 20_000, "the answer phase uses the picked time");
+  assert.throws(() => configure(room, "h0", { chatSeconds: 60 }), /started/);
+});
+
+test("solo and quick-match rooms keep their fixed timers", () => {
+  const solo = createRoom("SOLOX", { id: "h0", name: "Asha" }, T0, "reverse", "blitz");
+  assert.throws(() => configure(solo, "h0", { chatSeconds: 120 }), /fixed/);
+  const match = createRoom("MATCH", { id: "h0", name: "Asha" }, T0);
+  match.matchmade = true;
+  assert.throws(() => configure(match, "h0", { chatSeconds: 120 }), /fixed/);
 });

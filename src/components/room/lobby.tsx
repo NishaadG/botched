@@ -3,10 +3,125 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import type { RoomView } from "@/lib/game/engine";
-import { soloMode, TAGLINE } from "@/lib/game/modes";
+import { classicRounds, PACES, soloMode, TAGLINE, TIMER_CHOICES, type TimerKey } from "@/lib/game/modes";
 
 /** Quick match starts itself this long after the third person arrives (at once when full). */
 const AUTO_START_MS = 15_000;
+
+type TimerPatch = Partial<Record<TimerKey, number>>;
+const TIMER_ROWS: [TimerKey, string][] = [
+  ["answerSeconds", "Answer"],
+  ["chatSeconds", "Discuss"],
+  ["voteSeconds", "Vote"],
+];
+const secs = (n: number) => (n >= 120 && n % 60 === 0 ? `${n / 60}m` : `${n}s`);
+
+/** How long each phase lasts. The host picks; everyone sees it. */
+function TimerSettings({
+  view,
+  editable,
+  onChange,
+}: {
+  view: RoomView;
+  editable: boolean;
+  onChange: (patch: TimerPatch) => Promise<unknown>;
+}) {
+  const t = view.settings;
+  const [custom, setCustom] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const pace = PACES.find((p) => TIMER_ROWS.every(([k]) => p.timers[k] === t[k]));
+  const rounds = classicRounds(Math.max(2, view.players.length));
+  const perRound = t.answerSeconds + t.chatSeconds + t.voteSeconds + t.revealSeconds;
+  const minutes = Math.max(1, Math.round((rounds * perRound) / 60));
+
+  const set = async (patch: TimerPatch) => {
+    setPending(true);
+    setError("");
+    try {
+      await onChange(patch);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not change the timers.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const summary = (
+    <span>
+      {TIMER_ROWS.map(([k, label], i) => (
+        <span key={k}>
+          {i > 0 && <span className="text-line"> · </span>}
+          {label.toLowerCase()} <b className="font-normal text-text">{secs(t[k])}</b>
+        </span>
+      ))}
+      <span className="text-line"> · </span>up to ~{minutes} min
+    </span>
+  );
+
+  if (!editable) {
+    return (
+      <div className="border border-line bg-ink px-3 py-2.5 text-xs text-muted">
+        <span className="uppercase tracking-widest">Timers{pace ? ` · ${pace.label}` : ""}</span>
+        <p className="mt-1">{summary}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-line bg-ink p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] uppercase tracking-widest text-muted">Pace</p>
+        <button className="text-[11px] uppercase tracking-widest text-brand hover:underline" onClick={() => setCustom((c) => !c)}>
+          {custom ? "Done" : "Custom"}
+        </button>
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Game pace">
+        {PACES.map((p) => (
+          <button
+            key={p.id}
+            role="radio"
+            aria-checked={pace?.id === p.id}
+            disabled={pending}
+            onClick={() => set(p.timers)}
+            className={`border px-2 py-2 text-xs uppercase tracking-wider transition disabled:opacity-60 ${
+              pace?.id === p.id ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:border-muted"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {custom && (
+        <div className="mt-3 flex flex-col gap-2">
+          {TIMER_ROWS.map(([k, label]) => (
+            <div key={k} className="grid grid-cols-[4.5rem_1fr] items-center gap-2">
+              <span className="text-xs text-muted">{label}</span>
+              <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={`${label} time`}>
+                {TIMER_CHOICES[k].map((v) => (
+                  <button
+                    key={v}
+                    role="radio"
+                    aria-checked={t[k] === v}
+                    disabled={pending}
+                    onClick={() => set({ [k]: v })}
+                    className={`min-w-11 border px-1.5 py-1 text-xs transition disabled:opacity-60 ${
+                      t[k] === v ? "border-brand bg-brand/15 text-brand" : "border-line text-muted hover:border-muted"
+                    }`}
+                  >
+                    {secs(v)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="mt-2.5 text-xs text-muted">{summary}</p>
+      {error && <p className="mt-1 text-xs text-hot">{error}</p>}
+    </div>
+  );
+}
 
 export function Lobby({
   view,
@@ -14,6 +129,7 @@ export function Lobby({
   meId,
   online,
   onStart,
+  onConfigure,
   chatReady,
 }: {
   view: RoomView;
@@ -21,6 +137,7 @@ export function Lobby({
   meId: string;
   online: string[] | null;
   onStart: () => Promise<unknown>;
+  onConfigure: (patch: TimerPatch) => Promise<unknown>;
   /** Starting before the chat connects would make the first messages fail. */
   chatReady: boolean;
 }) {
@@ -210,6 +327,8 @@ export function Lobby({
             </li>
           </ul>
         </div>
+
+        {!solo && !view.matchmade && <TimerSettings view={view} editable={isHost} onChange={onConfigure} />}
 
         <div className="mt-auto">
           {autoLeft !== null ? (

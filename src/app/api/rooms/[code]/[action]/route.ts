@@ -1,9 +1,9 @@
-import { addMessage, castVote, GameError, join, leave, start, submitAnswer, tick, tickDue, viewFor } from "@/lib/game/engine";
+import { addMessage, castVote, configure, GameError, join, leave, start, submitAnswer, tick, tickDue, viewFor } from "@/lib/game/engine";
 import { loadRoom, markSeen, mutate, newBots, onlineIn } from "@/lib/game/runner";
 import { joinGroupChannel } from "@/lib/nexconn-server";
 import { getSession } from "@/lib/session";
 
-type Body = { id?: string; text?: string; targetId?: string };
+type Body = { id?: string; text?: string; targetId?: string; answerSeconds?: unknown; chatSeconds?: unknown; voteSeconds?: unknown };
 
 export async function POST(request: Request, ctx: RouteContext<"/api/rooms/[code]/[action]">) {
   const { code, action } = await ctx.params;
@@ -45,6 +45,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/rooms/[code
         const text = String(body.text ?? "").trim();
         if (!text) return Response.json({ error: "Write an answer first." }, { status: 400 });
         room = await mutate(code, (r, now) => submitAnswer(r, me.id, text, now));
+        break;
+      }
+      case "settings": {
+        const patch: Record<string, number> = {};
+        for (const k of ["answerSeconds", "chatSeconds", "voteSeconds"] as const) {
+          if (body[k] !== undefined) patch[k] = Number(body[k]);
+        }
+        room = await mutate(code, (r) => configure(r, me.id, patch));
         break;
       }
       case "vote":
