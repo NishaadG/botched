@@ -29,7 +29,7 @@ export function DailyChart({ title, unit, color, data }: { title: string; unit: 
   return (
     <figure className="card flex flex-col gap-3 p-5">
       <figcaption className="flex items-baseline justify-between gap-3">
-        <span className="font-display text-lg font-bold">{title}</span>
+        <span className="crt text-2xl leading-none text-text">{title}</span>
         <span className="text-sm text-muted">
           {active ? (
             <>

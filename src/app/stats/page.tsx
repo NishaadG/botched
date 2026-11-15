@@ -16,11 +16,11 @@ async function Charts() {
   const series = await getDailySeries(14);
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <DailyChart title="Games finished per day" unit="games" color="#a3ff5c" data={series.map((d) => ({ day: d.day, value: d.games }))} />
+      <DailyChart title="Games finished per day" unit="games" color="#3dff72" data={series.map((d) => ({ day: d.day, value: d.games }))} />
       <DailyChart
         title="Active players per day"
         unit="players"
-        color="#5cc8ff"
+        color="#5ce8ff"
         data={series.map((d) => ({ day: d.day, value: d.visitors }))}
       />
     </div>
@@ -33,7 +33,7 @@ async function Feedback() {
     <section className="grid gap-4 lg:grid-cols-[280px_1fr]">
       <div className="card flex flex-col justify-center p-6">
         <p className="text-sm text-muted">Average post-game rating</p>
-        <p className="font-display text-6xl font-black tabular-nums">
+        <p className="crt glow text-8xl leading-none text-brand tabular-nums">
           {fb.avg === null ? "—" : fb.avg.toFixed(1)}
           <span className="text-2xl text-muted"> / 5</span>
         </p>
@@ -42,11 +42,11 @@ async function Feedback() {
         </p>
       </div>
       <div className="card p-6">
-        <h2 className="font-display text-xl font-bold">What players said</h2>
+        <h2 className="crt text-3xl leading-none text-brand">What players said</h2>
         {fb.recent.length ? (
           <ul className="mt-4 grid gap-3 md:grid-cols-2">
             {fb.recent.map((f) => (
-              <li key={`${f.code}-${f.at}-${f.name}`} className="rounded-2xl bg-ink/60 p-4">
+              <li key={`${f.code}-${f.at}-${f.name}`} className="rounded-sm bg-ink/60 p-4">
                 <p className="leading-snug">“{f.text}”</p>
                 <p className="mt-2 text-xs text-muted">
                   {f.name} · rated {f.rating}/5
@@ -74,8 +74,8 @@ async function Wishlist() {
             <p className="text-sm font-semibold">
               {r.title}
             </p>
-            <div className="mt-1 h-2 rounded-full bg-ink">
-              <div className="h-2 rounded-full bg-warn" style={{ width: `${(r.n / top) * 100}%` }} />
+            <div className="mt-1 h-2 bg-ink">
+              <div className="h-2 bg-warn" style={{ width: `${(r.n / top) * 100}%` }} />
             </div>
           </div>
           <span className="font-mono text-sm tabular-nums">{r.n}</span>
@@ -93,8 +93,8 @@ export default function StatsPage() {
       <div className="bg-grid">
         <Nav />
         <header className="mx-auto w-full max-w-6xl px-4 pb-8 pt-10 md:pt-14">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Open stats</p>
-          <h1 className="mt-3 font-display text-5xl font-black md:text-6xl">Live numbers</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} Open stats</p>
+          <h1 className="mt-3 crt glow text-6xl leading-[0.85] text-brand md:text-7xl">Live numbers</h1>
           <p className="mt-3 max-w-2xl text-lg text-muted">
             Counted live from real games, never seeded or edited. Days are in UTC. Active players are people who opened
             the app with a nickname that day.
@@ -113,13 +113,13 @@ export default function StatsPage() {
         </Suspense>
         <section className="card grid gap-6 p-6 md:grid-cols-[1fr_1.2fr] md:items-center">
           <div>
-            <h2 className="font-display text-2xl font-extrabold">What players want next</h2>
+            <h2 className="crt text-3xl leading-none text-brand">What players want next</h2>
             <p className="mt-1 text-muted">Votes from the game hub. The winner is the next game we build.</p>
-            <Link href="/play" className="mt-4 inline-block text-sm text-cool hover:underline">
+            <Link href="/play" className="mt-4 inline-block text-sm text-brand hover:underline">
               Cast your vote →
             </Link>
           </div>
-          <Suspense fallback={<div className="h-32 animate-pulse rounded-2xl bg-ink/60" />}>
+          <Suspense fallback={<div className="h-32 animate-pulse rounded-sm bg-ink/60" />}>
             <Wishlist />
           </Suspense>
         </section>

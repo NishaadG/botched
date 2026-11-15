@@ -2,36 +2,39 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { Sigil } from "@/components/sigil";
+import { Sigil, handle } from "@/components/sigil";
 
 type Line =
-  | { kind: "gm"; text: string }
+  | { kind: "gm"; text: string; round?: boolean }
+  | { kind: "answer"; who: number; text: string }
   | { kind: "msg"; who: number; text: string }
   | { kind: "typing"; who: number }
   | { kind: "reveal"; who: number };
 
 const CAST = [
-  { alias: "Mango Fox", color: "#fb923c" },
-  { alias: "Sky Whale", color: "#38bdf8" },
-  { alias: "Violet Owl", color: "#a78bfa" },
-  { alias: "Lime Frog", color: "#a3e635" },
+  { alias: "Mango Fox", color: "#ffa04d" },
+  { alias: "Sky Whale", color: "#5ce8ff" },
+  { alias: "Violet Owl", color: "#c39bff" },
+  { alias: "Lime Frog", color: "#c8ff4d" },
 ];
+const BOT = 3;
 
 const SCRIPT: Line[] = [
-  { kind: "gm", text: "Round 1 · What did you do last Sunday? Be honest." },
-  { kind: "msg", who: 0, text: "slept till 2 and then felt guilty about it till 6" },
-  { kind: "msg", who: 1, text: "watched 3 episodes of a show i cant even name now" },
+  { kind: "gm", text: "What did you do last Sunday? Be honest.", round: true },
+  { kind: "answer", who: 0, text: "slept till 2 then felt guilty about it till 6" },
+  { kind: "answer", who: 2, text: "walked to the chai place and called it a run" },
+  { kind: "answer", who: 3, text: "rotted in bed lol. sunday is for rotting" },
+  { kind: "answer", who: 1, text: "3 episodes of a show i cant even name now" },
+  { kind: "gm", text: "Answers are in. 60 seconds. Who wrote like a machine?" },
+  { kind: "msg", who: 1, text: "frog's answer is just fox's answer but tidier" },
   { kind: "typing", who: 3 },
-  { kind: "msg", who: 3, text: "same as fox lol. sunday is for rotting" },
-  { kind: "msg", who: 2, text: "went for a run. by run i mean walked to the chai place" },
-  { kind: "msg", who: 1, text: "lime frog replied in like 0.5 seconds" },
-  { kind: "typing", who: 3 },
-  { kind: "msg", who: 3, text: "bro i just type fast what" },
-  { kind: "gm", text: "Time's up. Vote: who is the bot?" },
-  { kind: "reveal", who: 3 },
+  { kind: "msg", who: 3, text: "bro we all rot on sundays what" },
+  { kind: "msg", who: 2, text: "nobody says rotted AND rotting in one line" },
+  { kind: "gm", text: "Chat locked. Vote: who is the bot?" },
+  { kind: "reveal", who: BOT },
 ];
 
-// Open mid-conversation so the preview never starts as an empty box.
+// Open mid-round so the preview never starts as an empty box.
 const FIRST = 3;
 
 export function DemoChat() {
@@ -41,92 +44,126 @@ export function DemoChat() {
   useEffect(() => {
     if (reduce) return;
     const done = step >= SCRIPT.length;
-    const delay = done ? 4200 : SCRIPT[step]?.kind === "typing" ? 1100 : 1500;
+    const next = SCRIPT[step];
+    const delay = done ? 4500 : next?.kind === "typing" ? 1100 : next?.kind === "answer" ? 650 : 1600;
     const id = setTimeout(() => setStep((s) => (s >= SCRIPT.length ? FIRST : s + 1)), delay);
     return () => clearTimeout(id);
   }, [step, reduce]);
 
   // Typing indicators only show while they are the latest line.
   const visible = SCRIPT.slice(0, step).filter((l, i, arr) => l.kind !== "typing" || i === arr.length - 1);
+  const voting = step >= SCRIPT.length - 1;
+  const phase = step <= 5 ? "answer" : voting ? "vote" : "discuss";
 
   return (
-    <div className="card relative overflow-hidden p-0 shadow-[0_30px_120px_-40px_rgb(163_255_92/0.45)]">
-      <div className="flex items-center justify-between border-b border-line/60 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-panel-2 px-2.5 py-1 font-mono text-xs">Round 1/3</span>
-          <span className="rounded-full bg-brand px-2.5 py-1 text-xs font-bold text-brand-ink">Chat</span>
-        </div>
-        <div className="flex -space-x-2">
-          {CAST.map((c) => (
-            <Sigil key={c.alias} seed={c.alias} color={c.color} size={28} />
+    <div className="card relative overflow-hidden p-0">
+      <div className="scanbar" />
+      <div className="flex items-center justify-between gap-3 border-b border-line/80 px-4 py-2.5 text-[11px] uppercase tracking-widest text-muted">
+        <span>
+          <span className="text-brand">wtb_kxqp</span> · <span className="hidden sm:inline">round </span>1/3
+        </span>
+        <span className="flex shrink-0 gap-1">
+          {(["answer", "discuss", "vote"] as const).map((p) => (
+            <span key={p} className={`px-1.5 py-0.5 ${p === phase ? "bg-brand text-brand-ink" : "border border-line"}`}>
+              {p}
+            </span>
           ))}
-        </div>
+        </span>
       </div>
-      <ul className="flex h-[340px] flex-col md:h-[420px] justify-end gap-2.5 overflow-hidden p-4" aria-label="Example game chat">
+      <ul
+        className="flex h-[360px] flex-col justify-end gap-1 overflow-hidden px-3 py-3 font-mono text-[13px] md:h-[430px] md:px-4"
+        aria-label="Example game chat"
+      >
         <AnimatePresence initial={false} mode="popLayout">
           {visible.map((l) => {
             const key = SCRIPT.indexOf(l);
+            const anim = {
+              layout: true,
+              initial: { opacity: 0, y: 8 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0 },
+              transition: { duration: 0.18 },
+            } as const;
             if (l.kind === "gm")
               return (
                 <motion.li
-                  layout
                   key={key}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mx-auto rounded-2xl border border-brand/30 bg-brand/10 px-4 py-2 text-center text-sm"
+                  {...anim}
+                  className={`${l.round ? "border-y border-brand/25 bg-brand/[0.06] py-2" : "my-1"} px-1 leading-relaxed text-brand`}
                 >
-                  {l.text}
+                  <span className="mr-2 text-brand/60">{">>"}</span>
+                  {l.round ? (
+                    <>
+                      <span className="crt glow mr-2 text-lg leading-none">ROUND 1</span>
+                      <span className="text-text">{l.text}</span>
+                    </>
+                  ) : (
+                    <span className="uppercase tracking-wide">{l.text}</span>
+                  )}
                 </motion.li>
               );
             const c = CAST[l.who];
             if (l.kind === "reveal")
               return (
                 <motion.li
-                  layout
                   key={key}
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  layout
+                  initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
-                  className="mx-auto flex items-center gap-3 rounded-2xl border border-hot/50 bg-hot/15 px-4 py-3"
+                  className="mt-2 flex items-center gap-3 border border-hot/60 bg-hot/10 px-3 py-3"
                 >
                   <Sigil seed={c.alias} color={c.color} size={40} />
-                  <span>
-                    <b style={{ color: c.color }}>{c.alias}</b> was voted out.
+                  <span className="leading-tight">
+                    <span style={{ color: c.color }}>{handle(c.alias)}</span> <span className="text-muted">voted out, 3 votes</span>
                     <br />
-                    <span className="font-display text-lg font-extrabold text-hot">It was the bot.</span>
+                    <span className="crt glow text-3xl leading-none text-hot">IT WAS THE BOT.</span>
                   </span>
                 </motion.li>
               );
+            if (l.kind === "answer")
+              return (
+                <motion.li
+                  key={key}
+                  {...anim}
+                  className="flex items-start gap-2 border-l-2 bg-panel-2/70 px-3 py-1.5"
+                  style={{ borderColor: c.color }}
+                >
+                  <Sigil seed={c.alias} color={c.color} size={20} className="mt-0.5" />
+                  <p className="min-w-0">
+                    <span className="text-[10px] uppercase tracking-widest" style={{ color: c.color }}>
+                      {handle(c.alias)} answered
+                    </span>
+                    <br />
+                    <span className="text-text">{l.text}</span>
+                  </p>
+                </motion.li>
+              );
             return (
-              <motion.li
-                layout
-                key={key}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex items-end gap-2"
-              >
-                <Sigil seed={c.alias} color={c.color} size={28} />
-                <div className="flex flex-col">
-                  <span className="px-1 text-[11px] font-semibold" style={{ color: c.color }}>
-                    {c.alias}
-                  </span>
+              <motion.li key={key} {...anim} className="flex items-start gap-2 px-1 py-0.5 leading-snug">
+                <Sigil seed={c.alias} color={c.color} size={18} className="mt-0.5" />
+                <p className="min-w-0">
+                  <span style={{ color: c.color }}>{handle(c.alias)}</span>
+                  <span className="mx-1.5 text-muted">{">"}</span>
                   {l.kind === "typing" ? (
-                    <span className="flex gap-1 rounded-2xl rounded-bl-md bg-panel-2 px-3.5 py-3" aria-label="typing">
-                      <i className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                      <i className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                      <i className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
+                    <span className="inline-flex gap-0.5 align-middle" aria-label="typing">
+                      <i className="typing-dot h-1 w-1 bg-muted" />
+                      <i className="typing-dot h-1 w-1 bg-muted" />
+                      <i className="typing-dot h-1 w-1 bg-muted" />
                     </span>
                   ) : (
-                    <span className="rounded-2xl rounded-bl-md bg-panel-2 px-3.5 py-2 text-[15px] leading-snug">{l.text}</span>
+                    <span className="text-text">{l.text}</span>
                   )}
-                </div>
+                </p>
               </motion.li>
             );
           })}
         </AnimatePresence>
       </ul>
+      <div className="flex items-center gap-2 border-t border-line/80 px-4 py-2.5 text-[13px] text-muted">
+        <span className={`crt text-xl leading-none ${voting ? "" : "glow text-brand"}`}>{">"}</span>
+        <span className={voting ? "" : "cursor"}>{voting ? "chat locked" : ""}</span>
+      </div>
     </div>
   );
 }

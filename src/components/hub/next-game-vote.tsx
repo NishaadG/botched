@@ -79,7 +79,7 @@ export function NextGameVote({ games }: { games: readonly Game[] }) {
                   {String(games.indexOf(g) + 2).padStart(2, "0")}
                 </span>
                 <div>
-                  <h3 className="font-display text-xl font-bold">{g.title}</h3>
+                  <h3 className="crt text-3xl leading-none text-brand">{g.title}</h3>
                   <p className="mt-1 text-sm text-muted">{g.blurb}</p>
                 </div>
               </div>

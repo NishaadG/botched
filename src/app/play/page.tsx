@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer";
 import { LiveStatsSection } from "@/components/hub/live-stats";
 import { NextGameVote } from "@/components/hub/next-game-vote";
 import { Nav } from "@/components/nav";
-import { Sigil } from "@/components/sigil";
+import { Sigil, handle } from "@/components/sigil";
 import { TAGLINE } from "@/lib/game/modes";
 import { NEXT_GAMES } from "@/lib/stats";
 
@@ -15,73 +15,75 @@ export const metadata: Metadata = {
 };
 
 const PREVIEW = [
-  { alias: "Mango Fox", color: "#fb923c", text: "ok who here actually likes pineapple pizza" },
-  { alias: "Lime Frog", color: "#a3e635", text: "me lol. fight me" },
-  { alias: "Violet Owl", color: "#a78bfa", text: "frog that answer came way too fast" },
+  { alias: "Mango Fox", color: "#ffa04d", text: "ok who here actually likes pineapple pizza" },
+  { alias: "Lime Frog", color: "#c8ff4d", text: "me lol. fight me" },
+  { alias: "Violet Owl", color: "#c39bff", text: "frog that answer came way too fast" },
 ];
 
 export default function Hub() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <div className="bg-grid">
-        <Nav />
-        <header className="mx-auto w-full max-w-6xl px-4 pb-8 pt-10 md:pt-14">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">The arcade</p>
-          <h1 className="mt-3 font-display text-5xl font-black md:text-6xl">Pick a game.</h1>
-          <p className="mt-3 max-w-xl text-lg text-muted">
+      <Nav />
+      <header className="bg-grid border-b border-line/60">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-10 md:pt-14">
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} ls ./games</p>
+          <h1 className="crt glow mt-3 text-7xl leading-[0.85] text-brand md:text-8xl">PICK A GAME.</h1>
+          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
             Every game runs inside a real-time group chat. Make a room, send the link, play from any phone or laptop.
           </p>
-        </header>
-      </div>
+        </div>
+      </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-4 pb-20">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-4 py-12 md:py-16">
         <Link
           href="/play/whos-the-bot"
           className="card group relative grid gap-8 overflow-hidden p-6 transition hover:border-brand/60 md:grid-cols-[1.3fr_1fr] md:p-10"
         >
-          <div
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand/20 blur-3xl transition group-hover:bg-brand/30"
-            aria-hidden
-          />
+          <div className="scanbar" />
           <div className="relative">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-brand px-2.5 py-1 text-xs font-bold text-brand-ink">Live</span>
-              <span className="font-mono text-xs uppercase tracking-[0.25em] text-muted">Game 01</span>
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-widest">
+              <span className="bg-brand px-1.5 py-0.5 text-brand-ink">live</span>
+              <span className="text-muted">game 01</span>
             </div>
-            <h2 className="mt-4 font-display text-4xl font-black md:text-6xl">Who&apos;s the Bot?</h2>
-            <p className="mt-2 font-display text-xl font-bold text-brand">{TAGLINE.classic}</p>
-            <p className="mt-3 max-w-lg text-lg text-muted">
+            <h2 className="crt glow mt-4 text-6xl leading-[0.85] text-brand md:text-8xl">WHO&apos;S THE BOT?</h2>
+            <p className="crt mt-3 text-3xl leading-none text-text">{TAGLINE.classic}</p>
+            <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-muted">
               One player in the chat is an AI wearing a human mask. Answer the prompt, argue, vote people out, and catch it
               before it outlasts you.
             </p>
-            <ul className="mt-5 flex flex-wrap gap-2 text-sm text-muted">
-              <li className="rounded-full border border-line px-3 py-1">2 to 8 players</li>
-              <li className="rounded-full border border-line px-3 py-1">~5 minutes</li>
-              <li className="rounded-full border border-line px-3 py-1">Social deduction</li>
-              <li className="rounded-full border border-brand/50 px-3 py-1 text-brand">5 solo modes</li>
-              <li className="rounded-full border border-line px-3 py-1">Quick match</li>
+            <ul className="mt-5 flex flex-wrap gap-1.5 text-[11px] uppercase tracking-widest text-muted">
+              {["2-8 players", "~5 minutes", "social deduction", "quick match"].map((t) => (
+                <li key={t} className="border border-line px-2 py-1">
+                  {t}
+                </li>
+              ))}
+              <li className="border border-brand/50 px-2 py-1 text-brand">5 solo modes</li>
             </ul>
-            <span className="btn btn-brand mt-7 px-7 py-4 text-lg">Play now →</span>
+            <span className="btn btn-brand mt-7 px-7 py-4">Play now →</span>
           </div>
-          <div className="relative flex flex-col justify-end gap-2" aria-hidden>
+          <div className="relative flex flex-col justify-end gap-1.5 font-mono text-[13px]" aria-hidden>
             {PREVIEW.map((m, i) => (
-              <div key={i} className="flex items-end gap-2" style={{ opacity: 0.55 + i * 0.2 }}>
-                <Sigil seed={m.alias} color={m.color} size={32} />
-                <span className="rounded-2xl rounded-bl-md bg-panel-2 px-3.5 py-2">{m.text}</span>
-              </div>
+              <p key={i} className="flex items-start gap-2" style={{ opacity: 0.5 + i * 0.25 }}>
+                <Sigil seed={m.alias} color={m.color} size={18} className="mt-0.5" />
+                <span>
+                  <span style={{ color: m.color }}>{handle(m.alias)}</span>
+                  <span className="mx-1.5 text-muted">{">"}</span>
+                  <span className="text-text">{m.text}</span>
+                </span>
+              </p>
             ))}
           </div>
         </Link>
 
         <Suspense fallback={null}>
-          <LiveStatsSection title="So far" />
+          <LiveStatsSection title="so far" />
         </Suspense>
 
         <section>
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.3em] text-warn">Coming next</p>
-              <h2 className="mt-2 font-display text-3xl font-extrabold md:text-4xl">You choose the next game.</h2>
+              <p className="text-xs uppercase tracking-[0.3em] text-warn">{">"} coming next</p>
+              <h2 className="crt glow mt-2 text-5xl leading-[0.9] text-text md:text-6xl">YOU PICK THE NEXT GAME.</h2>
             </div>
             <p className="max-w-sm text-sm text-muted">
               The idea with the most votes gets built next. One vote each, and you can change it.

@@ -13,8 +13,8 @@ export default function LoungePage() {
       <Nav />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-10">
         <header className="mb-6">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Lounge</p>
-          <h1 className="mt-2 font-display text-4xl font-black md:text-5xl">Find people to play with</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} Lounge</p>
+          <h1 className="mt-2 crt glow text-5xl leading-[0.85] text-brand md:text-6xl">Find people to play with</h1>
         </header>
         <LoungeClient />
       </main>

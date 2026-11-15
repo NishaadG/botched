@@ -26,7 +26,7 @@ async function Profile() {
   if (!session) {
     return (
       <div className="card flex flex-col items-start gap-4 p-8">
-        <h1 className="font-display text-4xl font-black">No games yet</h1>
+        <h1 className="crt glow text-5xl leading-[0.85] text-brand">No games yet</h1>
         <p className="text-muted">Pick a nickname and play a round. Your stats will show up here.</p>
         <Link href="/play/whos-the-bot" className="btn btn-brand">
           Play Who&apos;s the Bot
@@ -48,7 +48,7 @@ async function Profile() {
       <div className="card flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between md:p-8">
         <ProfileName name={session.name} />
         <div className="text-left md:text-right">
-          <p className="font-display text-5xl font-black text-brand tabular-nums">{winRate}%</p>
+          <p className="crt glow text-7xl leading-none text-brand tabular-nums">{winRate}%</p>
           <p className="text-sm text-muted">of your games ended with the bot caught</p>
         </div>
       </div>
@@ -57,23 +57,23 @@ async function Profile() {
         {tiles.map((t) => (
           <div key={t.label} className="card p-5">
             <dt className="text-sm text-muted">{t.label}</dt>
-            <dd className="font-display text-4xl font-extrabold tabular-nums">{t.value}</dd>
+            <dd className="crt glow text-5xl leading-none text-brand tabular-nums">{t.value}</dd>
           </div>
         ))}
       </dl>
 
       <section className="card p-5 md:p-6">
-        <h2 className="font-display text-2xl font-extrabold">Recent games</h2>
+        <h2 className="crt text-3xl leading-none text-brand">Recent games</h2>
         {rec.recent.length ? (
           <ul className="mt-4 flex flex-col gap-2">
             {rec.recent.map((g) => (
               <li key={`${g.code}-${g.at}`}>
                 <Link
                   href={`/r/${g.code}`}
-                  className="flex items-center gap-3 rounded-xl bg-ink/60 px-4 py-3 transition hover:bg-white/5"
+                  className="flex items-center gap-3 rounded-sm bg-ink/60 px-4 py-3 transition hover:bg-white/5"
                 >
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-bold ${g.won ? "bg-brand text-brand-ink" : "bg-hot text-white"}`}
+                    className={`rounded-sm px-2 py-0.5 text-[11px] uppercase tracking-widest ${g.won ? "bg-brand text-brand-ink" : "bg-hot text-white"}`}
                   >
                     {g.won ? "Caught it" : "Fooled"}
                   </span>

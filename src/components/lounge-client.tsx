@@ -103,7 +103,7 @@ export function LoungeClient() {
   if (!session) {
     return (
       <div className="card w-full max-w-md p-6">
-        <h2 className="mb-1 font-display text-2xl font-bold">Join the lounge</h2>
+        <h2 className="mb-1 crt text-3xl leading-none text-brand">Join the lounge</h2>
         <p className="mb-4 text-sm text-muted">Chat with other players and jump into open games.</p>
         <NicknameForm cta="Enter the lounge" onSubmit={saveName} />
       </div>
@@ -140,7 +140,7 @@ export function LoungeClient() {
                       key={m.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex flex-col items-start gap-3 rounded-2xl border border-brand/30 bg-brand/10 p-4 sm:flex-row sm:items-center"
+                      className="flex flex-col items-start gap-3 rounded-sm border border-brand/30 bg-brand/10 p-4 sm:flex-row sm:items-center"
                     >
                       <span className="crt text-2xl leading-none text-brand" aria-hidden>
                         {">"}
@@ -167,7 +167,7 @@ export function LoungeClient() {
                       <b style={{ color: colorFor(m.from) }}>{name}</b> <span className="text-muted">{time(m.at)}</span>
                     </span>
                     <span
-                      className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${
+                      className={`max-w-[80%] rounded-sm px-3.5 py-2 text-[15px] leading-snug ${
                         mine ? "rounded-br-md bg-brand text-brand-ink" : "rounded-bl-md bg-panel-2"
                       }`}
                     >
@@ -198,14 +198,14 @@ export function LoungeClient() {
 
       <aside className="flex flex-col gap-4">
         <div className="card p-5">
-          <h2 className="font-display text-xl font-bold">Need players?</h2>
+          <h2 className="crt text-3xl leading-none text-brand">Need players?</h2>
           <p className="mt-1 text-sm text-muted">Open a room and we&apos;ll post it here so anyone in the lounge can join.</p>
           <button className="btn btn-brand mt-4 w-full" onClick={hostAndPost} disabled={hosting || status !== "ready"}>
             {hosting ? "Opening…" : "Host & post a game"}
           </button>
         </div>
         <div className="card p-5 text-sm text-muted">
-          <h2 className="mb-2 font-display text-lg font-bold text-text">Lounge rules</h2>
+          <h2 className="mb-2 crt text-2xl leading-none text-text">Lounge rules</h2>
           <ul className="space-y-1.5">
             <li>Be nice. It&apos;s a party.</li>
             <li>No spoilers about which alias was the bot.</li>

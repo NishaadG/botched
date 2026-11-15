@@ -17,9 +17,9 @@ export async function LiveStats({ compact = false }: { compact?: boolean }) {
   return (
     <dl className={`grid grid-cols-2 gap-3 ${compact ? "" : "md:grid-cols-4"}`}>
       {items.map((i) => (
-        <div key={i.label} className="rounded-2xl border border-line bg-ink/60 px-4 py-3">
-          <dt className="text-xs text-muted">{i.label}</dt>
-          <dd className="font-display text-2xl font-extrabold tabular-nums">{i.value}</dd>
+        <div key={i.label} className="border border-line bg-ink/60 px-4 py-3">
+          <dt className="text-[11px] uppercase tracking-widest text-muted">{i.label}</dt>
+          <dd className="crt glow text-4xl leading-none text-brand tabular-nums">{i.value}</dd>
         </div>
       ))}
     </dl>
@@ -30,7 +30,7 @@ export function LiveStatsSkeleton({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`grid grid-cols-2 gap-3 ${compact ? "" : "md:grid-cols-4"}`}>
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-[68px] animate-pulse rounded-2xl border border-line bg-ink/60" />
+        <div key={i} className="h-[68px] animate-pulse border border-line bg-ink/60" />
       ))}
     </div>
   );
@@ -44,7 +44,9 @@ export async function LiveStatsSection({ title, aside, className = "" }: { title
     <section className={className}>
       {title && (
         <div className="mb-4 flex items-end justify-between gap-4">
-          <h2 className="font-display text-2xl font-extrabold md:text-3xl">{title}</h2>
+          <h2 className="text-xs uppercase tracking-[0.3em] text-muted">
+            {">"} {title}
+          </h2>
           {aside}
         </div>
       )}

@@ -65,8 +65,8 @@ export default function HowToPlay() {
       <div className="bg-grid">
         <Nav />
         <header className="mx-auto w-full max-w-4xl px-4 pb-10 pt-10 md:pt-14">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Rules</p>
-          <h1 className="mt-3 font-display text-5xl font-black md:text-6xl">How to play Who&apos;s the Bot</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} Rules</p>
+          <h1 className="mt-3 crt glow text-6xl leading-[0.85] text-brand md:text-7xl">How to play Who&apos;s the Bot</h1>
           <p className="mt-4 max-w-2xl text-lg text-muted">
             Social deduction in a group chat. One of the players is an AI trying to pass as human. Two minutes to learn,
             hard to master.
@@ -79,7 +79,7 @@ export default function HowToPlay() {
           {RULES.map((r, i) => (
             <div key={r.title} className="card p-6">
               <span className="font-mono text-sm text-brand">0{i + 1}</span>
-              <h2 className="mt-2 font-display text-2xl font-bold">{r.title}</h2>
+              <h2 className="mt-2 crt text-3xl leading-none text-brand">{r.title}</h2>
               <ul className="mt-3 space-y-2 text-sm text-muted">
                 {r.points.map((p) => (
                   <li key={p} className="flex gap-2">
@@ -95,8 +95,8 @@ export default function HowToPlay() {
         </section>
 
         <section className="card p-6">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Solo mode</p>
-          <h2 className="mt-2 font-display text-3xl font-extrabold">Who&apos;s the Human</h2>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} Solo mode</p>
+          <h2 className="mt-2 crt text-4xl leading-none text-brand">Who&apos;s the Human</h2>
           <ul className="mt-4 space-y-2 text-muted">
             {SOLO.map((p) => (
               <li key={p} className="flex gap-2">
@@ -110,11 +110,11 @@ export default function HowToPlay() {
         </section>
 
         <section>
-          <h2 className="font-display text-3xl font-extrabold">Tips for catching it</h2>
+          <h2 className="crt text-4xl leading-none text-brand">Tips for catching it</h2>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {TIPS.map(([t, b]) => (
               <li key={t} className="card p-5">
-                <h3 className="font-display text-lg font-bold">{t}</h3>
+                <h3 className="crt text-2xl leading-none text-text">{t}</h3>
                 <p className="mt-1 text-sm text-muted">{b}</p>
               </li>
             ))}
@@ -122,7 +122,7 @@ export default function HowToPlay() {
         </section>
 
         <section>
-          <h2 className="font-display text-3xl font-extrabold">Questions</h2>
+          <h2 className="crt text-4xl leading-none text-brand">Questions</h2>
           <div className="mt-5 flex flex-col gap-2">
             {FAQ.map(([q, a]) => (
               <details key={q} className="card group p-5 [&_summary::-webkit-details-marker]:hidden">

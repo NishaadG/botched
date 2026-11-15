@@ -205,7 +205,7 @@ export function RoomClient() {
   if (notFound) {
     return (
       <Centered>
-        <h1 className="font-display text-3xl font-bold">Room {code} doesn&apos;t exist</h1>
+        <h1 className="crt glow text-5xl leading-[0.9] text-brand">Room {code} doesn&apos;t exist</h1>
         <p className="text-muted">It may have expired. Start a new one.</p>
         <Link href="/play/whos-the-bot" className="btn btn-brand">
           New game
@@ -221,7 +221,7 @@ export function RoomClient() {
   if (outsider) {
     return (
       <Centered>
-        <h1 className="font-display text-3xl font-bold">This game already started</h1>
+        <h1 className="crt glow text-5xl leading-[0.9] text-brand">This game already started</h1>
         <p className="text-muted">Start your own room and send the link to your friends.</p>
         <Link href="/play/whos-the-bot" className="btn btn-brand">
           New game
@@ -234,7 +234,7 @@ export function RoomClient() {
     return (
       <Centered>
         <p className="font-mono text-sm uppercase tracking-[0.3em] text-brand">Room {code}</p>
-        <h1 className="font-display text-4xl font-extrabold">You&apos;re invited to Who&apos;s the Bot</h1>
+        <h1 className="crt glow text-5xl leading-[0.9] text-brand">You&apos;re invited to Who&apos;s the Bot</h1>
         <p className="max-w-sm text-muted">One player in this chat is secretly an AI. Pick a nickname to join.</p>
         <div className="card w-full max-w-sm p-5 text-left">
           <NicknameForm cta="Join the game" onSubmit={saveName} />

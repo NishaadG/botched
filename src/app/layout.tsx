@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0a14",
+  themeColor: "#030703",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${bricolage.variable} ${inter.variable} ${mono.variable} ${crt.variable} h-full`}>
-      <body className="min-h-full flex flex-col">
+      <body className="term min-h-full flex flex-col">
         {children}
         <Pwa />
       </body>

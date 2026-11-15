@@ -23,7 +23,7 @@ async function Board({ k, unit }: { k: BoardKey; unit: string }) {
   const rows = await getBoard(k, 10);
   if (!rows.length) {
     return (
-      <p className="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-muted">
+      <p className="rounded-sm border border-dashed border-line p-6 text-center text-sm text-muted">
         Nobody here yet.{" "}
         <Link href="/play/whos-the-bot" className="text-brand hover:underline">
           Play a game
@@ -35,11 +35,11 @@ async function Board({ k, unit }: { k: BoardKey; unit: string }) {
   return (
     <ol className="flex flex-col gap-1.5">
       {rows.map((r, i) => (
-        <li key={r.id} className={`flex items-center gap-3 rounded-xl px-3 py-2 ${i === 0 ? "bg-brand/10" : "bg-ink/60"}`}>
+        <li key={r.id} className={`flex items-center gap-3 rounded-sm px-3 py-2 ${i === 0 ? "bg-brand/10" : "bg-ink/60"}`}>
           <span className="w-7 text-center font-mono text-sm text-muted">{String(i + 1).padStart(2, "0")}</span>
           <span className="truncate font-semibold">{r.name}</span>
           <span className="ml-auto font-mono text-sm tabular-nums">
-            {r.score} <span className="text-muted">{unit}</span>
+            {r.score} <span className="text-muted">{r.score === 1 ? unit.replace(/s$/, "") : unit}</span>
           </span>
         </li>
       ))}
@@ -51,7 +51,7 @@ function BoardSkeleton() {
   return (
     <div className="flex flex-col gap-1.5">
       {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} className="h-10 animate-pulse rounded-xl bg-ink/60" />
+        <div key={i} className="h-10 animate-pulse rounded-sm bg-ink/60" />
       ))}
     </div>
   );
@@ -63,11 +63,11 @@ export default function Leaderboard() {
       <div className="bg-grid">
         <Nav />
         <header className="mx-auto w-full max-w-6xl px-4 pb-8 pt-10 md:pt-14">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Leaderboard</p>
-          <h1 className="mt-3 font-display text-5xl font-black md:text-6xl">Humans vs the bot</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} Leaderboard</p>
+          <h1 className="mt-3 crt glow text-6xl leading-[0.85] text-brand md:text-7xl">Humans vs the bot</h1>
           <p className="mt-3 max-w-xl text-lg text-muted">
             Every number here comes from finished games. Updated live.{" "}
-            <Link href="/stats" className="text-cool hover:underline">
+            <Link href="/stats" className="text-brand hover:underline">
               Daily stats →
             </Link>
           </p>
@@ -81,7 +81,7 @@ export default function Leaderboard() {
           {BOARDS.map((b) => (
             <section key={b.key} className="card flex flex-col gap-4 p-5">
               <div>
-                <h2 className="font-display text-2xl font-extrabold">{b.title}</h2>
+                <h2 className="crt text-3xl leading-none text-brand">{b.title}</h2>
                 <p className="text-sm text-muted">{b.blurb}</p>
               </div>
               <Suspense fallback={<BoardSkeleton />}>

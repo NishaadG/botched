@@ -51,15 +51,15 @@ export default function Privacy() {
       <div className="bg-grid">
         <Nav />
         <header className="mx-auto w-full max-w-3xl px-4 pb-8 pt-10 md:pt-14">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Privacy</p>
-          <h1 className="mt-3 font-display text-5xl font-black md:text-6xl">What we keep</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} Privacy</p>
+          <h1 className="mt-3 crt glow text-6xl leading-[0.85] text-brand md:text-7xl">What we keep</h1>
           <p className="mt-3 text-lg text-muted">Short version: a nickname, your game stats and the chat, and not much else.</p>
         </header>
       </div>
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-20">
         {SECTIONS.map((s) => (
           <section key={s.title} className="card p-6">
-            <h2 className="font-display text-2xl font-extrabold">{s.title}</h2>
+            <h2 className="crt text-3xl leading-none text-brand">{s.title}</h2>
             <ul className="mt-3 flex list-disc flex-col gap-2 pl-5 text-muted">
               {s.points.map((p) => (
                 <li key={p}>{p}</li>

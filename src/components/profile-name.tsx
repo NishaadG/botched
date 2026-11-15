@@ -27,8 +27,8 @@ export function ProfileName({ name }: { name: string }) {
   return (
     <div>
       <p className="text-sm text-muted">Playing as</p>
-      <h1 className="font-display text-4xl font-black md:text-5xl">{name}</h1>
-      <button className="mt-1 text-sm text-cool underline-offset-2 hover:underline" onClick={() => setEditing(true)}>
+      <h1 className="crt glow text-5xl leading-[0.85] text-brand md:text-6xl">{name}</h1>
+      <button className="mt-1 text-sm text-brand underline-offset-2 hover:underline" onClick={() => setEditing(true)}>
         Change nickname
       </button>
     </div>

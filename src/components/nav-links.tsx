@@ -28,7 +28,7 @@ const ICONS: Record<string, React.ReactNode> = {
 
 function Icon({ name }: { name: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="miter" strokeLinecap="square" aria-hidden>
       {ICONS[name]}
     </svg>
   );
@@ -44,18 +44,41 @@ const LINKS = [
 
 const isActive = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
 
+const PATH_NAMES: Record<string, string> = {
+  "/play": "play",
+  "/lounge": "lounge",
+  "/leaderboard": "ranks",
+  "/how-to-play": "rules",
+  "/me": "me",
+  "/stats": "stats",
+  "/privacy": "privacy",
+};
+
+/** BOTCHED:// plus the section you are in, like a path at a prompt. */
+export function Wordmark({ withPath = false, className = "" }: { withPath?: boolean; className?: string }) {
+  const path = usePathname();
+  const key = Object.keys(PATH_NAMES).find((k) => isActive(path, k));
+  return (
+    <Link href="/" className={`crt glow glitch text-[26px] leading-none text-brand ${className}`} aria-label="Botched home">
+      BOTCHED<span className="text-muted">://{withPath && key ? PATH_NAMES[key] : ""}</span>
+    </Link>
+  );
+}
+
 export function NavLinks() {
   const path = usePathname();
   return (
-    <div className="hidden items-center gap-1 text-sm sm:flex">
+    <div className="hidden items-center gap-0.5 text-xs uppercase tracking-widest sm:flex">
       {LINKS.map((l) => (
         <Link
           key={l.href}
           href={l.href}
           aria-current={isActive(path, l.href) ? "page" : undefined}
-          className="rounded-full px-3 py-2 text-muted transition hover:bg-white/5 hover:text-text aria-[current=page]:bg-white/5 aria-[current=page]:text-text"
+          className="group px-2.5 py-2 text-muted transition hover:text-brand aria-[current=page]:text-brand"
         >
+          <span className="opacity-0 transition group-hover:opacity-60 group-aria-[current=page]:opacity-100">[</span>
           {l.label}
+          <span className="opacity-0 transition group-hover:opacity-60 group-aria-[current=page]:opacity-100">]</span>
         </Link>
       ))}
     </div>
@@ -67,7 +90,7 @@ export function MobileTabs() {
   const path = usePathname();
   return (
     <nav
-      className="mobile-tabs fixed inset-x-0 bottom-0 z-40 border-t border-line/70 bg-ink/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden"
+      className="mobile-tabs fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden"
       aria-label="Main"
     >
       <ul className="grid grid-cols-5">
@@ -78,7 +101,7 @@ export function MobileTabs() {
               <Link
                 href={l.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${active ? "text-brand" : "text-muted"}`}
+                className={`flex flex-col items-center gap-0.5 py-2 text-[10px] uppercase tracking-widest transition ${active ? "text-brand glow" : "text-muted"}`}
               >
                 <Icon name={l.icon} />
                 {l.label}

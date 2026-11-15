@@ -55,7 +55,7 @@ export function FeedbackCard({ code }: { code: string }) {
                   aria-label={f.label}
                   title={f.label}
                   onClick={() => setRating(f.v)}
-                  className={`flex h-14 flex-1 flex-col items-center justify-center rounded-xl border transition ${
+                  className={`flex h-14 flex-1 flex-col items-center justify-center rounded-sm border transition ${
                     rating >= f.v ? "border-brand bg-brand/15 text-brand" : "border-line bg-ink text-muted hover:bg-white/5"
                   }`}
                 >
