@@ -24,6 +24,8 @@ const SECTIONS: { title: string; points: string[] }[] = [
       "Game rooms, including their chat, are deleted automatically 24 hours after they were last used.",
       "Feedback comments may be shown publicly on the stats page next to your nickname, with swear words masked.",
       "Your IP address is used only for short rate limits against spam and is not kept beyond 10 minutes.",
+      "Page visits are counted without a cookie: your IP address and browser name are turned into a one-way code with a key that changes every day, so we can count unique visitors but can't recognise you on another day.",
+      "If you arrived through a tagged link (like ?ref=reel1) or from another site, that tag or site name is kept in your browser and counted, so we know which posts bring players.",
     ],
   },
   {

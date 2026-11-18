@@ -18,7 +18,8 @@ interface KV {
   ztop(key: string, n: number): Promise<{ member: string; score: number }[]>;
   zscore(key: string, member: string): Promise<number>;
   mget<T>(keys: string[]): Promise<(T | null)[]>;
-  sadd(key: string, member: string): Promise<void>;
+  /** Returns 1 when the member was new, 0 when it was already there. */
+  sadd(key: string, member: string): Promise<number>;
   /** Pushes to the front of a list and trims it to `max` items. */
   lpush<T>(key: string, value: T, max: number): Promise<void>;
   lrange<T>(key: string, n: number): Promise<T[]>;
@@ -82,8 +83,10 @@ function memoryKV(): KV {
     },
     async sadd(key, member) {
       const s = new Set((live(key)?.v as string[]) ?? []);
+      const fresh = s.has(member) ? 0 : 1;
       s.add(member);
       m.set(key, { v: [...s] });
+      return fresh;
     },
     async lpush(key, value, max) {
       const list = (live(key)?.v as unknown[]) ?? [];
@@ -138,7 +141,7 @@ function redisKV(redis: Redis): KV {
       return redis.mget<(T | null)[]>(...keys);
     },
     async sadd(key, member) {
-      await redis.sadd(key, member);
+      return redis.sadd(key, member);
     },
     async lpush(key, value, max) {
       await redis.lpush(key, value);

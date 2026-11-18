@@ -6,6 +6,7 @@ import { DailyChart } from "@/components/hub/daily-chart";
 import { LiveStats, LiveStatsSkeleton } from "@/components/hub/live-stats";
 import { Nav } from "@/components/nav";
 import { getDailySeries, getFeedback, getNextGameVotes, NEXT_GAMES } from "@/lib/stats";
+import { getSources } from "@/lib/visits";
 
 export const metadata: Metadata = {
   title: "Live stats",
@@ -23,7 +24,55 @@ async function Charts() {
         color="#5ce8ff"
         data={series.map((d) => ({ day: d.day, value: d.visitors }))}
       />
+      <DailyChart
+        title="Site visitors per day"
+        unit="visitors"
+        color="#c39bff"
+        data={series.map((d) => ({ day: d.day, value: d.site }))}
+      />
+      <Sources />
     </div>
+  );
+}
+
+/** Which links and sites people arrive from, and how many of them went on to pick a nickname. */
+async function Sources() {
+  const rows = await getSources(8);
+  const top = Math.max(1, ...rows.map((r) => r.visits));
+  return (
+    <figure className="card flex flex-col gap-3 p-5">
+      <figcaption>
+        <p className="font-semibold">Where people come from</p>
+        <p className="text-xs text-muted">Visitors, and how many of them went on to play. Counted since Nov 18.</p>
+      </figcaption>
+      {rows.length ? (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-widest text-muted">
+              <th className="pb-2 font-normal">source</th>
+              <th className="pb-2 text-right font-normal">visitors</th>
+              <th className="pb-2 pl-4 text-right font-normal">played</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.source} className="border-t border-line/60">
+                <td className="py-1.5 pr-3">
+                  <span className="block truncate">{r.source}</span>
+                  <span className="mt-1 block h-1 bg-ink">
+                    <span className="block h-1 bg-brand/70" style={{ width: `${(r.visits / top) * 100}%` }} />
+                  </span>
+                </td>
+                <td className="py-1.5 text-right font-mono tabular-nums">{r.visits}</td>
+                <td className="py-1.5 pl-4 text-right font-mono tabular-nums">{r.players}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-sm text-muted">No visits counted yet.</p>
+      )}
+    </figure>
   );
 }
 
@@ -97,7 +146,7 @@ export default function StatsPage() {
           <h1 className="mt-3 crt glow text-6xl leading-[0.85] text-brand md:text-7xl">Live numbers</h1>
           <p className="mt-3 max-w-2xl text-lg text-muted">
             Counted live from real games, never seeded or edited. Days are in UTC. Active players are people who opened
-            the app with a nickname that day.
+            the app with a nickname that day. Site visitors are counted anonymously, without a cookie.
           </p>
         </header>
       </div>

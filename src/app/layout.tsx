@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Bricolage_Grotesque, Inter, JetBrains_Mono, VT323 } from "next/font/google";
 import { Pwa } from "@/components/pwa";
+import { VisitBeacon } from "@/components/visit-beacon";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"] });
@@ -32,6 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="term min-h-full flex flex-col">
         {children}
         <Pwa />
+        <Suspense fallback={null}>
+          <VisitBeacon />
+        </Suspense>
       </body>
     </html>
   );

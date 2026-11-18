@@ -91,11 +91,12 @@ export async function getNextGameVotes(uid?: string) {
 export async function getDailySeries(days = 14) {
   await connection();
   const keys = Array.from({ length: days }, (_, i) => dayKey(Date.now() - (days - 1 - i) * 86_400_000));
-  const [games, messages, players, visitors] = await Promise.all([
+  const [games, messages, players, visitors, site] = await Promise.all([
     kv.mget<number>(keys.map((d) => `day:games:${d}`)),
     kv.mget<number>(keys.map((d) => `day:messages:${d}`)),
     Promise.all(keys.map((d) => kv.scard(`day:players:${d}`))),
     Promise.all(keys.map((d) => kv.scard(`day:visitors:${d}`))),
+    Promise.all(keys.map((d) => kv.scard(`day:site:${d}`))),
   ]);
   return keys.map((day, i) => ({
     day,
@@ -103,6 +104,7 @@ export async function getDailySeries(days = 14) {
     messages: Number(messages[i] ?? 0),
     players: players[i],
     visitors: visitors[i],
+    site: site[i],
   }));
 }
 

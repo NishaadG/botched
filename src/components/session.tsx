@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { firstSource } from "@/components/visit-beacon";
 
 export interface ClientSession {
   uid: string;
@@ -32,7 +33,7 @@ export function useSession() {
     const res = await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, source: firstSource() }),
     });
     const j = await res.json();
     if (!res.ok) throw new Error(j.error ?? "Could not save your nickname.");

@@ -2,6 +2,7 @@ import { issueAccessToken } from "@/lib/nexconn-server";
 import { cleanName, getSession, isTestClient, newUserId, saveSession } from "@/lib/session";
 import { dayKey } from "@/lib/stats";
 import { clientIp, kv, limited } from "@/lib/store";
+import { cleanSource } from "@/lib/visits";
 
 export async function GET() {
   const session = await getSession();
@@ -16,7 +17,7 @@ export async function GET() {
 
 /** Creates a guest identity (or renames the current one) and issues a Nexconn access token. */
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { name?: string };
+  const body = (await request.json().catch(() => ({}))) as { name?: string; source?: string };
   const name = cleanName(body.name);
   if (name.length < 2) return Response.json({ error: "Pick a nickname with at least 2 characters." }, { status: 400 });
 
@@ -34,6 +35,8 @@ export async function POST(request: Request) {
     await Promise.all([
       counted && kv.sadd("stats:visitors", uid),
       counted && kv.sadd(`day:visitors:${dayKey()}`, uid),
+      // Credit new players to the post or link that first brought them here.
+      counted && !existing && kv.zincr("src:players", cleanSource(body.source) || "direct", 1),
       kv.set(`name:${uid}`, name),
     ]);
     return Response.json({ session: { uid, name, token }, appKey: process.env.NEXT_PUBLIC_NEXCONN_APP_KEY });
