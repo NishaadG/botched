@@ -73,7 +73,7 @@ export default function Home() {
       <main className="flex flex-col gap-20 py-16 md:gap-28 md:py-24">
         <Suspense fallback={null}>
           <LiveStatsSection
-            title="live from real games"
+            title="live numbers"
             className="mx-auto w-full max-w-6xl px-4"
             aside={
               <Link href="/leaderboard" className="text-xs uppercase tracking-widest text-muted hover:text-brand">
