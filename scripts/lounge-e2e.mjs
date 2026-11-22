@@ -41,7 +41,7 @@ console.log("Asha hosting", code);
 await b.waitForSelector(`text=Join ${code}`, { timeout: 15000 });
 await b.screenshot({ path: `${OUT}/lounge-invite.png` });
 await b.click(`text=Join ${code}`);
-await a.waitForFunction(() => document.body.innerText.includes("In the room (2/8)"), null, { timeout: 20000 });
+await a.waitForFunction(() => /connected \(2\/8\)/i.test(document.body.innerText), null, { timeout: 20000 });
 console.log("Kabir joined from the lounge invite");
 await a.screenshot({ path: `${OUT}/lounge-lobby.png` });
 console.log(errors.length ? `ERRORS:\n${errors.join("\n")}` : "no browser errors");

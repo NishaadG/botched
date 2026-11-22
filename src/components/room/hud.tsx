@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { RoomView } from "@/lib/game/engine";
 import { handle } from "@/components/sigil";
 import { Avatar } from "./chat";
+import { play } from "@/lib/sfx";
 
 const PHASE_LABEL: Record<string, string> = {
   answer: "Answer",
@@ -50,6 +51,11 @@ function Steps({ phase, interrogation }: { phase: string; interrogation: boolean
 
 export function PhaseBar({ view, offset }: { view: RoomView; offset: number }) {
   const left = useCountdown(view.phaseEndsAt, offset);
+  // Ticks for the last five seconds of answering, chatting and voting.
+  useEffect(() => {
+    if (view.phase === "reveal" || left <= 0 || left > 5) return;
+    play(left === 1 ? "tickLast" : "tick");
+  }, [left, view.phase]);
   const total = phaseTotal(view) || 1;
   const pct = Math.min(100, (left / total) * 100);
   const urgent = left <= 10 && view.phase !== "reveal";

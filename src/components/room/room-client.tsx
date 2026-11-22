@@ -24,6 +24,7 @@ import { handle } from "@/components/sigil";
 import { Results } from "@/components/room/results";
 
 import { GM_ID } from "@/lib/constants";
+import { buzz, isMuted, onMutedChange, play, setMuted } from "@/lib/sfx";
 
 async function post(code: string, action: string, body: object = {}) {
   const res = await fetch(`/api/rooms/${code}/${action}`, {
@@ -112,6 +113,7 @@ export function RoomClient() {
         return;
       }
       setTyping((t) => ({ ...t, [m.from]: 0 }));
+      if (m.from !== session.uid) play("msg");
       setMessages((list) => (list.some((x) => x.id === m.id) ? list : [...list, m].sort((a, b) => a.at - b.at)));
     });
     connectChat(appKey, session.token, session.uid)
@@ -162,10 +164,51 @@ export function RoomClient() {
     return () => clearInterval(id);
   }, [session, phase, isHost, code, apply]);
 
-  // A short buzz on phones when voting opens, so nobody misses it.
+  // Sound and a short buzz on each phase change, so nobody misses a step. Only on live changes, never on first load.
+  const prevPhase = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (phase === "vote" && "vibrate" in navigator) navigator.vibrate?.(80);
-  }, [phase]);
+    if (!view) return;
+    const prev = prevPhase.current;
+    const key = `${view.phase}:${view.round}`;
+    prevPhase.current = key;
+    if (prev === undefined || prev === key) return;
+    if (view.phase === "answer") {
+      play("answer");
+      buzz(40);
+    } else if (view.phase === "chat") {
+      play("drop");
+      buzz(40);
+    } else if (view.phase === "vote") {
+      play("vote");
+      buzz(80);
+    } else if (view.phase === "reveal") {
+      const last = view.eliminations.at(-1);
+      const interrogation = view.variant === "interrogation";
+      if (interrogation || last?.playerId) {
+        // Lands on the HUMAN / AI stamp animation in the reveal card.
+        const at = interrogation ? 0.95 : 1.25;
+        const bad = interrogation ? view.verdict === "human" : !last?.wasBot;
+        play("scan");
+        play(bad ? "stampHuman" : "stampAI", at);
+        setTimeout(() => buzz([30, 40, 90]), at * 1000);
+      } else {
+        play("tie");
+      }
+    } else if (view.phase === "over") {
+      const won = view.winner === "humans";
+      play(won ? "win" : "lose");
+      buzz(won ? [40, 60, 40, 60, 120] : 200);
+    }
+  }, [view]);
+
+  // A blip when someone new joins the lobby.
+  const lobbyCount = useRef(0);
+  const playerCount = view?.players.length ?? 0;
+  useEffect(() => {
+    if (phase !== "lobby") return;
+    if (lobbyCount.current && playerCount > lobbyCount.current) play("join");
+    lobbyCount.current = playerCount;
+  }, [phase, playerCount]);
 
   // Closing the tab in the lobby frees the seat (a reload simply rejoins).
   useEffect(() => {
@@ -188,6 +231,7 @@ export function RoomClient() {
     async (text: string) => {
       if (!view) return;
       const sent = await sendGroupText(view.channelId, text);
+      play("send");
       setMessages((list) => [...list, sent].sort((a, b) => a.at - b.at));
       post(code, "message", { id: sent.id, text }).then(apply).catch(() => {});
     },
@@ -253,13 +297,14 @@ export function RoomClient() {
   return (
     <div className={`term flex flex-col ${inGame ? "h-dvh overflow-hidden" : "min-h-dvh"}`}>
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line/80 bg-ink/70 px-4 py-2.5">
-        <Link href="/" className="crt glow text-2xl leading-none text-brand">
-          BOTCHED<span className="text-muted">://{view.mode === "reverse" ? "whos-the-human" : "whos-the-bot"}</span>
+        <Link href="/" className="crt glow shrink-0 whitespace-nowrap text-2xl leading-none text-brand">
+          BOTCHED<span className="hidden text-muted sm:inline">://{view.mode === "reverse" ? "whos-the-human" : "whos-the-bot"}</span>
         </Link>
-        <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="flex items-center gap-2 whitespace-nowrap text-xs text-muted">
           <span className={`h-2 w-2 ${chatStatus === "connected" ? "bg-brand shadow-[0_0_8px] shadow-brand" : "animate-pulse bg-warn"}`} />
           <span className="hidden sm:inline">{chatStatus === "connected" ? "LIVE" : "CONNECTING"} ·</span> ROOM{" "}
           <span className="text-text">{view.code}</span>
+          <SoundToggle />
         </div>
       </header>
 
@@ -295,6 +340,29 @@ export function RoomClient() {
         </main>
       )}
     </div>
+  );
+}
+
+/** [SOUND ON] / [SOUND OFF] switch in the room header; the choice is remembered on this device. */
+function SoundToggle() {
+  const [muted, setMutedState] = useState(true);
+  useEffect(() => {
+    const sync = () => setMutedState(isMuted());
+    sync();
+    return onMutedChange(sync);
+  }, []);
+  return (
+    <button
+      type="button"
+      onClick={() => setMuted(!muted)}
+      aria-pressed={!muted}
+      aria-label={muted ? "Turn sound on" : "Turn sound off"}
+      className={`ml-1 whitespace-nowrap border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] transition-colors ${
+        muted ? "border-line text-muted hover:text-text" : "border-brand/60 text-brand hover:bg-brand/10"
+      }`}
+    >
+      {muted ? "Sound off" : "Sound on"}
+    </button>
   );
 }
 
