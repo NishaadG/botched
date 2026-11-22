@@ -24,6 +24,7 @@ export function LoungeClient() {
   const { session, appKey, loading, saveName } = useSession();
   const [channelId, setChannelId] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "connecting" | "ready" | "error">("idle");
+  const [attempt, setAttempt] = useState(0);
   const [messages, setMessages] = useState<IncomingMessage[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -59,7 +60,19 @@ export function LoungeClient() {
       off();
       if (entered) exitOpenChannel(entered);
     };
-  }, [session, appKey]);
+  }, [session, appKey, attempt]);
+
+  // Try again on its own after a failed connection, or as soon as the network comes back.
+  useEffect(() => {
+    if (status !== "error") return;
+    const retry = () => setAttempt((n) => n + 1);
+    const id = setTimeout(retry, 8000);
+    window.addEventListener("online", retry);
+    return () => {
+      clearTimeout(id);
+      window.removeEventListener("online", retry);
+    };
+  }, [status]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -123,6 +136,11 @@ export function LoungeClient() {
             <span className="text-sm font-semibold">
               {status === "ready" ? "Lounge" : status === "error" ? "Couldn't connect" : "Connecting…"}
             </span>
+            {status === "error" && (
+              <button type="button" className="text-xs text-brand underline underline-offset-2" onClick={() => setAttempt((n) => n + 1)}>
+                Retry
+              </button>
+            )}
           </div>
           <span className="text-xs text-muted">{people} recently active</span>
         </div>

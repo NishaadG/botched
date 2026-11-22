@@ -23,7 +23,7 @@ if (VARIANT === "oneclick") {
   await page.goto(`${BASE}/play/whos-the-bot?solo=1`);
   await page.fill("#nick", "Solo");
   await page.click("text=Play solo vs 3 AIs");
-  await page.waitForURL(/\/r\/[A-Z]+$/, { timeout: 20000 });
+  await page.waitForURL(/\/r\/[A-Z]+/, { timeout: 20000 });
 } else {
   await page.goto(`${BASE}/play/whos-the-bot`);
   await page.fill("#nick", "Solo");
@@ -36,10 +36,17 @@ if (VARIANT === "oneclick") {
   );
   await page.goto(`${BASE}/r/${code}`);
 }
-const code = page.url().split("/").pop();
+const code = page.url().split("/").pop().split("?")[0];
 await page.waitForSelector("text=AI took your job");
 await shot("1-lobby");
-await page.locator("main button.btn-brand").first().click();
+if (VARIANT === "oneclick") {
+  // Solo rooms opened from a play button count down and start on their own.
+  await page.waitForFunction(() => /starting in \d/i.test(document.body.innerText), null, { timeout: 20000 });
+  await page.waitForFunction(() => !/starting in \d/i.test(document.body.innerText), null, { timeout: 20000 });
+  if (page.url().includes("start=")) throw new Error("start flag left in the address bar");
+} else {
+  await page.locator("main button.btn-brand").first().click();
+}
 console.log("solo", VARIANT, code, "started");
 
 const robotic = [
@@ -64,7 +71,7 @@ if (VARIANT === "interrogation") {
       .catch(() => {});
     if (!(await box.isEnabled().catch(() => false))) break;
     await box.fill(robotic[i % robotic.length]);
-    await page.locator("form button").click().catch(() => {});
+    await page.keyboard.press("Enter").catch(() => {});
     if (i === 1) await shot("2-questioning");
   }
 } else {
@@ -74,7 +81,7 @@ if (VARIANT === "interrogation") {
     if (!ready || (await page.innerText("body")).toLowerCase().includes("game over")) break;
     if (await answer.count()) {
       await answer.fill(robotic[round % robotic.length]);
-      await page.locator("form button").click();
+      await page.keyboard.press("Enter");
       if (round === 1) await shot("2-answer-locked");
     }
     const box = page.locator('input[aria-label="Message"]:enabled');
@@ -85,7 +92,7 @@ if (VARIANT === "interrogation") {
     }
     if (await box.count()) {
       await box.fill(robotic[(round + 1) % robotic.length]);
-      await page.locator("form button").click().catch(() => {});
+      await page.keyboard.press("Enter").catch(() => {});
     }
     const over = await page.locator(".absolute.inset-x-0 button").first().or(page.getByText("Game over")).first().waitFor({ timeout: 120000 })
       .then(async () => (await page.innerText("body")).toLowerCase().includes("game over"));

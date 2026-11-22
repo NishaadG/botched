@@ -67,7 +67,7 @@ export function Results({
     setBusy(true);
     const res = await fetch(`/api/rooms/${view.code}/rematch`, { method: "POST" });
     const j = await res.json().catch(() => ({}));
-    if (res.ok) router.push(`/r/${j.code}`);
+    if (res.ok) router.push(`/r/${j.code}${solo ? "?start=1" : ""}`);
     else setBusy(false);
   };
 

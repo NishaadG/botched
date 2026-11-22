@@ -42,11 +42,12 @@ export function RoomClient() {
   const code = String(params.code ?? "").toUpperCase();
   const { session, appKey, loading, saveName } = useSession();
   const [view, setView] = useState<RoomView | null>(null);
-  const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [messages, setMessages] = useState<IncomingMessage[]>([]);
   const [typing, setTyping] = useState<Record<string, number>>({});
   const [chatStatus, setChatStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
+  const [chatFailed, setChatFailed] = useState(false);
+  const [chatAttempt, setChatAttempt] = useState(0);
   // Server clock minus ours, so every player's countdown agrees.
   const [offset, setOffset] = useState(0);
   const versionRef = useRef(0);
@@ -128,13 +129,35 @@ export function RoomClient() {
           );
         });
       })
-      .catch((e: Error) => setError(e.message));
+      .catch(() => {
+        if (cancelled) return;
+        setChatStatus("disconnected");
+        setChatFailed(true);
+      });
     return () => {
       cancelled = true;
       offStatus();
       offMsg();
     };
-  }, [session, appKey, view?.channelId, refresh]);
+  }, [session, appKey, view?.channelId, refresh, chatAttempt]);
+
+  // A failed connection retries on its own when the tab comes back or the network returns.
+  useEffect(() => {
+    if (!chatFailed) return;
+    const retry = () => {
+      setChatFailed(false);
+      setChatAttempt((n) => n + 1);
+    };
+    const onVisible = () => document.visibilityState === "visible" && retry();
+    const id = setTimeout(retry, 8000);
+    window.addEventListener("online", retry);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(id);
+      window.removeEventListener("online", retry);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [chatFailed]);
 
   // Answers are posted by the server on each player's behalf; pull history once they drop so nothing is missed.
   const round = view?.round;
@@ -308,7 +331,21 @@ export function RoomClient() {
         </div>
       </header>
 
-      {error && <p className="shrink-0 bg-hot/15 px-4 py-2 text-center text-sm text-hot">{error}</p>}
+      {chatFailed && (
+        <p role="status" className="shrink-0 bg-warn/15 px-4 py-2 text-center text-sm text-warn">
+          Chat dropped. Retrying in a few seconds…{" "}
+          <button
+            type="button"
+            className="underline underline-offset-2 hover:text-text"
+            onClick={() => {
+              setChatFailed(false);
+              setChatAttempt((n) => n + 1);
+            }}
+          >
+            Retry now
+          </button>
+        </p>
+      )}
 
       {view.phase === "lobby" ? (
         <Lobby view={view} isHost={isHost} meId={session.uid} online={online} onStart={startGame} onConfigure={(patch) => post(code, "settings", patch).then(apply)} chatReady={chatStatus === "connected"} />

@@ -32,7 +32,8 @@ export default function WhosTheBotStart() {
       const res = await fetch(url, { method: "POST" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error);
-      router.push(`/r/${j.code}`);
+      // Solo rooms count down and start themselves; group rooms wait for friends.
+      router.push(`/r/${j.code}${key === "solo" ? "?start=1" : ""}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not open a room.");
       setBusy(null);

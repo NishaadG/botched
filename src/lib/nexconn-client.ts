@@ -37,6 +37,8 @@ const listeners = new Set<Listener>();
 const statusListeners = new Set<StatusListener>();
 let connecting: Promise<string> | null = null;
 let connectedUser: string | null = null;
+let initialized = false;
+let pendingUser: string | null = null;
 
 export const GAME_EVENT = "BT:Game";
 export const TYPING = "BT:Typing";
@@ -71,10 +73,12 @@ function toIncoming(m: {
 }
 
 export function connectChat(appKey: string, token: string, userId: string) {
-  if (connectedUser === userId && connecting) return connecting;
-  connecting = (async () => {
+  if ((connectedUser === userId || pendingUser === userId) && connecting) return connecting;
+  pendingUser = userId;
+  const run = (async () => {
     const { NCEngine, MessageHandler, ConnectionStatusHandler, ConnectionStatus, AreaCode, LogLevel } = await sdk();
-    if (!connectedUser) {
+    if (!initialized) {
+      initialized = true;
       NCEngine.initialize({ appKey, areaCode: AreaCode.SG, logLevel: LogLevel.ERROR });
       NCEngine.registerCustomMessages([
         { messageType: GAME_EVENT, isPersisted: true, isCounted: false },
@@ -106,19 +110,33 @@ export function connectChat(appKey: string, token: string, userId: string) {
           },
         }),
       );
-    } else {
+    } else if (connectedUser) {
       await NCEngine.disconnect();
+      connectedUser = null;
     }
-    const result = await NCEngine.connect({ token });
-    if (!result.isOk) {
-      connecting = null;
-      throw new Error(`Chat connection failed (code ${result.code})`);
+    // Flaky mobile networks often fail the first attempt, so try a few times before giving up.
+    let result: Awaited<ReturnType<typeof NCEngine.connect>> | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, attempt * 1500));
+      result = await NCEngine.connect({ token }).catch(() => null);
+      if (result?.isOk) break;
+    }
+    pendingUser = null;
+    if (!result?.isOk) {
+      statusListeners.forEach((l) => l("disconnected"));
+      throw new Error(`Chat connection failed (code ${result?.code ?? "network"})`);
     }
     connectedUser = userId;
     statusListeners.forEach((l) => l("connected"));
     return userId;
   })();
-  return connecting;
+  connecting = run;
+  // Any failure (SDK load included) clears the slot so the next call starts fresh.
+  run.catch(() => {
+    if (connecting === run) connecting = null;
+    if (pendingUser === userId) pendingUser = null;
+  });
+  return run;
 }
 
 export function onMessage(listener: Listener) {

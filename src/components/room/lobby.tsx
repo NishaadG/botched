@@ -7,6 +7,8 @@ import { classicRounds, PACES, soloMode, TAGLINE, TIMER_CHOICES, type TimerKey }
 
 /** Quick match starts itself this long after the third person arrives (at once when full). */
 const AUTO_START_MS = 15_000;
+/** Solo games opened from a play button start themselves after this long (enough to read the three rules). */
+const SOLO_AUTO_MS = 6_000;
 
 type TimerPatch = Partial<Record<TimerKey, number>>;
 const TIMER_ROWS: [TimerKey, string][] = [
@@ -166,20 +168,52 @@ export function Lobby({
   // The clock runs for the whole quick-match lobby, so "now" is fresh when the third player lands.
   if (ready && autoAt === null) setAutoAt(now + (full ? 0 : AUTO_START_MS));
   if (!ready && autoAt !== null) setAutoAt(null);
+
+  // Solo games opened from a play button ("?start=1") count down and start on their own; "Wait" cancels.
+  // The lobby only renders after the room loads in the browser, so reading the URL here is safe.
+  const [soloAuto, setSoloAuto] = useState(
+    () => solo && isHost && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("start") === "1",
+  );
+  const [soloAt, setSoloAt] = useState<number | null>(null);
+  if (soloAuto && chatReady && soloAt === null) setSoloAt(now + SOLO_AUTO_MS);
   useEffect(() => {
-    if (!view.matchmade) return;
-    const id = setInterval(() => setNow(Date.now()), 500);
+    // Drop the flag from the address bar so a reload or a shared link never auto-starts.
+    if (new URLSearchParams(window.location.search).has("start")) window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+  const soloLeft = soloAuto && soloAt !== null ? Math.max(0, Math.ceil((soloAt - now) / 1000)) : null;
+
+  useEffect(() => {
+    if (!view.matchmade && !soloAuto) return;
+    const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
-  }, [view.matchmade]);
+  }, [view.matchmade, soloAuto]);
   const autoLeft = autoAt === null ? null : Math.max(0, Math.ceil((autoAt - now) / 1000));
   const firing = useRef(false);
   useEffect(() => {
-    if (autoLeft !== 0 || !canControl || !chatReady || firing.current) return;
+    if ((autoLeft !== 0 && soloLeft !== 0) || !canControl || !chatReady || firing.current) return;
     firing.current = true;
-    onStart().catch(() => {
-      firing.current = false;
-    });
-  }, [autoLeft, canControl, chatReady, onStart]);
+    setBusy(true);
+    onStart()
+      .catch((e) => {
+        firing.current = false;
+        setSoloAuto(false);
+        setError(e instanceof Error ? e.message : "Could not start.");
+      })
+      .finally(() => setBusy(false));
+  }, [autoLeft, soloLeft, canControl, chatReady, onStart]);
+
+  const start = async () => {
+    setSoloAuto(false);
+    setBusy(true);
+    setError("");
+    try {
+      await onStart();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not start.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     const url = `${window.location.origin}/r/${view.code}`;
@@ -335,21 +369,25 @@ export function Lobby({
             <p className="border border-brand/40 bg-brand/10 p-4 text-center text-brand">
               <span className="crt glow text-3xl leading-none">STARTING IN {autoLeft}</span>
             </p>
+          ) : soloLeft !== null && !busy ? (
+            <div className="border border-brand/40 bg-brand/10 p-4 text-center text-brand">
+              <p className="crt glow text-3xl leading-none" aria-live="polite">
+                STARTING IN {soloLeft}
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" className="btn btn-brand py-2.5" onClick={start}>
+                  Start now
+                </button>
+                <button type="button" className="btn btn-ghost py-2.5" onClick={() => setSoloAuto(false)}>
+                  Wait
+                </button>
+              </div>
+            </div>
           ) : canControl ? (
             <button
               className="btn btn-brand w-full text-lg"
               disabled={!canStart || busy || !chatReady || (view.matchmade && !ready)}
-              onClick={async () => {
-                setBusy(true);
-                setError("");
-                try {
-                  await onStart();
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : "Could not start.");
-                } finally {
-                  setBusy(false);
-                }
-              }}
+              onClick={start}
             >
               {startLabel}
             </button>
