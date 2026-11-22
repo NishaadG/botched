@@ -213,11 +213,6 @@ async function recordStats(code: string) {
   await mutate(code, async (room) => {
     if (room.statsRecorded) return [];
     room.statsRecorded = true;
-    // Our own automated playtests are logged privately for reports, never mixed into real-player numbers.
-    if (room.test) {
-      await recordPlaytest(room);
-      return [];
-    }
     const humansWon = room.winner === "humans";
     const solo = room.mode === "reverse";
     const final = room.eliminations.at(-1);
@@ -230,6 +225,12 @@ async function recordStats(code: string) {
     const day = dayKey();
     await kv.incr(`day:games:${day}`);
     await kv.incr(`day:messages:${day}`, room.transcript.length);
+    // Our own playtests count as games played, but their scripted players stay out of player counts,
+    // leaderboards and records. Each one is also logged for test reports.
+    if (room.test) {
+      await recordPlaytest(room);
+      return [];
+    }
     for (const p of humans) {
       const caught = !solo && humansWon && !!final && room.votes[p.id] === final.playerId;
       await kv.sadd("stats:players", p.id);
@@ -255,7 +256,7 @@ async function recordStats(code: string) {
   });
 }
 
-/** One finished automated playtest, logged (not shown on the site) so test reports can list what was played. */
+/** One finished automated playtest, logged so test reports can list exactly what was played. */
 async function recordPlaytest(room: Room) {
   const ais = new Set(room.players.filter((p) => p.isBot).map((p) => p.id));
   const entry: Playtest = {

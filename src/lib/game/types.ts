@@ -93,7 +93,7 @@ export interface Room {
   verdict?: "human" | "ai";
   version: number;
   statsRecorded?: boolean;
-  /** Created by an automated test: logged as a playtest, never counted in player stats or feedback. */
+  /** Created by an automated test: counted as a game and logged as a playtest, never in player stats, leaderboards or feedback. */
   test?: boolean;
   /** Code of the follow-up room, once someone starts a rematch. */
   rematch?: string;

@@ -145,8 +145,9 @@ export default function StatsPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-muted">{">"} Open stats</p>
           <h1 className="mt-3 crt glow text-6xl leading-[0.85] text-brand md:text-7xl">Live numbers</h1>
           <p className="mt-3 max-w-2xl text-lg text-muted">
-            Counted live from real games, never seeded or edited. Days are in UTC. Active players are people who opened
-            the app with a nickname that day. Site visitors are counted anonymously, without a cookie.
+            Counted live from real games, never seeded or edited. Games include our own test games on the live site;
+            players and leaderboards don&apos;t. Days are in UTC. Active players are people who opened the app with a
+            nickname that day. Site visitors are counted anonymously, without a cookie.
           </p>
         </header>
       </div>
