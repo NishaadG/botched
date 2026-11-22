@@ -5,7 +5,7 @@ import { chooseVerdict, chooseVote, generateAnswer, generateLine, shouldReply, t
 import { AI_PERSONAS, DETECTIVE, personaById, PERSONAS } from "../bot/personas";
 import { sendGroupEvent, sendGroupText } from "../nexconn-server";
 import { kv } from "../store";
-import { dayKey, emptyRecord, type PlayerRecord } from "../stats";
+import { dayKey, emptyRecord, type PlayerRecord, type Playtest } from "../stats";
 import { createGroupChannel } from "../nexconn-server";
 import { createRoom } from "./engine";
 import { DEMO_TIMERS, FAST_TIMERS, type SoloVariant } from "./modes";
@@ -213,7 +213,11 @@ async function recordStats(code: string) {
   await mutate(code, async (room) => {
     if (room.statsRecorded) return [];
     room.statsRecorded = true;
-    if (room.test) return [];
+    // Our own automated playtests are published separately on the stats page, never mixed into real-player numbers.
+    if (room.test) {
+      await recordPlaytest(room);
+      return [];
+    }
     const humansWon = room.winner === "humans";
     const solo = room.mode === "reverse";
     const final = room.eliminations.at(-1);
@@ -249,6 +253,27 @@ async function recordStats(code: string) {
     }
     return [];
   });
+}
+
+/** One finished automated playtest, logged publicly so it's clear what we tested and how. */
+async function recordPlaytest(room: Room) {
+  const ais = new Set(room.players.filter((p) => p.isBot).map((p) => p.id));
+  const entry: Playtest = {
+    code: room.code,
+    at: Date.now(),
+    mode: room.mode === "reverse" ? `Solo ${room.variant ?? "classic"}` : "Who's the Bot",
+    humans: room.players.length - ais.size,
+    ais: ais.size,
+    rounds: room.round,
+    winner: room.winner === "humans" ? "humans" : "AI",
+    messages: room.transcript.length,
+    aiMessages: room.transcript.filter((l) => ais.has(l.from)).length,
+    chatSeconds: room.settings.chatSeconds,
+    where: process.env.VERCEL_ENV === "production" ? "live site" : "local build",
+  };
+  await kv.incr("qa:games");
+  await kv.incr("qa:messages", entry.messages);
+  await kv.lpush("qa:log", entry, 40);
 }
 
 /** Lobby presence: each open lobby tab refreshes a short-lived key, so closed tabs drop out. */

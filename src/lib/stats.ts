@@ -115,3 +115,27 @@ export async function getFeedback(n = 30) {
   const avg = rated.length ? rated.reduce((a, f) => a + f.rating, 0) / rated.length : null;
   return { count: list.length, avg, recent: list.filter((f) => f.text).slice(0, n) };
 }
+
+/** An automated playtest: scripted browsers playing a full game over the real chat and AI. */
+export interface Playtest {
+  code: string;
+  at: number;
+  mode: string;
+  humans: number;
+  ais: number;
+  rounds: number;
+  winner: "humans" | "AI";
+  messages: number;
+  aiMessages: number;
+  chatSeconds: number;
+  where: "live site" | "local build";
+}
+
+export async function getPlaytests(n = 12) {
+  await connection();
+  const [[games, messages], recent] = await Promise.all([
+    kv.mget<number>(["qa:games", "qa:messages"]),
+    kv.lrange<Playtest>("qa:log", n),
+  ]);
+  return { games: Number(games ?? 0), messages: Number(messages ?? 0), recent };
+}
