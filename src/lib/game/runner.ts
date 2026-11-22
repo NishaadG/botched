@@ -213,7 +213,7 @@ async function recordStats(code: string) {
   await mutate(code, async (room) => {
     if (room.statsRecorded) return [];
     room.statsRecorded = true;
-    // Our own automated playtests are published separately on the stats page, never mixed into real-player numbers.
+    // Our own automated playtests are logged privately for reports, never mixed into real-player numbers.
     if (room.test) {
       await recordPlaytest(room);
       return [];
@@ -255,7 +255,7 @@ async function recordStats(code: string) {
   });
 }
 
-/** One finished automated playtest, logged publicly so it's clear what we tested and how. */
+/** One finished automated playtest, logged (not shown on the site) so test reports can list what was played. */
 async function recordPlaytest(room: Room) {
   const ais = new Set(room.players.filter((p) => p.isBot).map((p) => p.id));
   const entry: Playtest = {

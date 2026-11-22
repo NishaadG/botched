@@ -131,11 +131,3 @@ export interface Playtest {
   where: "live site" | "local build";
 }
 
-export async function getPlaytests(n = 12) {
-  await connection();
-  const [[games, messages], recent] = await Promise.all([
-    kv.mget<number>(["qa:games", "qa:messages"]),
-    kv.lrange<Playtest>("qa:log", n),
-  ]);
-  return { games: Number(games ?? 0), messages: Number(messages ?? 0), recent };
-}

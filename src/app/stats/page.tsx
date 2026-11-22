@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer";
 import { DailyChart } from "@/components/hub/daily-chart";
 import { LiveStats, LiveStatsSkeleton } from "@/components/hub/live-stats";
 import { Nav } from "@/components/nav";
-import { getDailySeries, getFeedback, getNextGameVotes, getPlaytests, NEXT_GAMES } from "@/lib/stats";
+import { getDailySeries, getFeedback, getNextGameVotes, NEXT_GAMES } from "@/lib/stats";
 import { getSources } from "@/lib/visits";
 
 export const metadata: Metadata = {
@@ -134,73 +134,6 @@ async function Wishlist() {
   );
 }
 
-/** Our own automated test games, published in full but kept out of every number above. */
-async function Playtests() {
-  const { games, messages, recent } = await getPlaytests(12);
-  const when = (t: number) =>
-    new Date(t).toLocaleString("en-GB", { timeZone: "UTC", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  return (
-    <section className="card flex flex-col gap-5 p-6">
-      <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
-        <div>
-          <h2 className="crt text-3xl leading-none text-brand">Our playtests</h2>
-          <p className="mt-2 max-w-3xl text-sm text-muted">
-            Automated games we run to check every release: real Chrome browsers, scripted with Playwright, playing whole
-            games through the same Nexconn chat and the same AI as everyone else. They are listed here in full and never
-            added to the numbers above. Logged since Nov 22.
-          </p>
-        </div>
-        <div className="flex gap-6 font-mono text-sm">
-          <p>
-            <span className="block text-[11px] uppercase tracking-widest text-muted">test games</span>
-            <span className="crt text-4xl leading-none text-text tabular-nums">{games}</span>
-          </p>
-          <p>
-            <span className="block text-[11px] uppercase tracking-widest text-muted">messages</span>
-            <span className="crt text-4xl leading-none text-text tabular-nums">{messages}</span>
-          </p>
-        </div>
-      </div>
-      {recent.length ? (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-widest text-muted">
-                <th className="pb-2 font-normal">finished (UTC)</th>
-                <th className="pb-2 font-normal">game</th>
-                <th className="pb-2 font-normal">players</th>
-                <th className="pb-2 text-right font-normal">rounds</th>
-                <th className="pb-2 font-normal pl-4">winner</th>
-                <th className="pb-2 text-right font-normal">messages (AI)</th>
-                <th className="pb-2 pl-4 font-normal">where</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((r) => (
-                <tr key={`${r.code}-${r.at}`} className="border-t border-line/60">
-                  <td className="py-1.5 pr-3 font-mono text-xs text-muted">{when(r.at)}</td>
-                  <td className="py-1.5 pr-3">{r.mode}</td>
-                  <td className="py-1.5 pr-3 text-muted">
-                    {r.humans} test player{r.humans === 1 ? "" : "s"} + {r.ais} AI{r.ais === 1 ? "" : "s"}
-                  </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums">{r.rounds}</td>
-                  <td className={`py-1.5 pl-4 ${r.winner === "AI" ? "text-hot" : "text-brand"}`}>{r.winner}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums">
-                    {r.messages} <span className="text-muted">({r.aiMessages})</span>
-                  </td>
-                  <td className="py-1.5 pl-4 text-muted">{r.where}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="text-sm text-muted">No playtests logged yet.</p>
-      )}
-    </section>
-  );
-}
-
 const Skeleton = ({ h = "h-64" }: { h?: string }) => <div className={`card ${h} animate-pulse`} />;
 
 export default function StatsPage() {
@@ -226,9 +159,6 @@ export default function StatsPage() {
         </Suspense>
         <Suspense fallback={<Skeleton h="h-48" />}>
           <Feedback />
-        </Suspense>
-        <Suspense fallback={<Skeleton h="h-48" />}>
-          <Playtests />
         </Suspense>
         <section className="card grid gap-6 p-6 md:grid-cols-[1fr_1.2fr] md:items-center">
           <div>
